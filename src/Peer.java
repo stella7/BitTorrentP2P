@@ -28,7 +28,7 @@ public class Peer implements MessageConstants{
     static final String ZK_CONNECT_STR = "snorkel.uwaterloo.ca:2181";
 	static String zkNode = System.getProperty("user.name");
 	private static CuratorFramework curClient;
-	ConcurrentMap<Peer, Connection> connections = new ConcurrentHashMap<>();
+	ConcurrentMap<PeerInfo, Connection> connectionMap = new ConcurrentHashMap<>();
 	static boolean isSeeder = false;
 	static BitField myBitField;
 	public static ConcurrentHashMap<String,BitField> bitMap = new ConcurrentHashMap<>();
@@ -141,6 +141,7 @@ public class Peer implements MessageConstants{
 				try {
 					socket = new Socket(peer.getHost(), peer.getPort());
 					Connection connection = Connection.init(peer, socket);
+					connectionMap.put(peer, connection);
 					//To be continued...
 					
 				} catch (UnknownHostException e) {

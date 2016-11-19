@@ -32,6 +32,8 @@ public class TrackerRequest {
     	int pPort = dis.readInt();
  
     	PeerInfo peer = new PeerInfo(pId, pHost, pPort);
+    	
+    	
     	//read file
     	int filelen = dis.readInt();
 		byte[] fileRaw = new byte[filelen];
@@ -44,11 +46,12 @@ public class TrackerRequest {
     public void sendRequest(OutputStream out) throws IOException{
     	DataOutputStream dos = new DataOutputStream(out);
         dos.writeShort(event.ordinal());
+        //dos.write(peerInfo.encodePeer());
         dos.writeInt(peerInfo.getPeerId().length());
         dos.write(peerInfo.getPeerId().getBytes(StandardCharsets.US_ASCII));
         dos.writeInt(peerInfo.getHost().length());
         dos.write(peerInfo.getHost().getBytes(StandardCharsets.US_ASCII));
-        dos.writeInt(peerInfo.getPort());;
+        dos.writeInt(peerInfo.getPort());
         dos.writeInt(fileName.length());
         dos.write(fileName.getBytes(StandardCharsets.US_ASCII));
         dos.flush();

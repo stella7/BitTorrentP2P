@@ -1,28 +1,26 @@
 
 import java.io.*;
+import java.net.InetAddress;
+import java.net.InetSocketAddress;
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
+import java.nio.charset.StandardCharsets;
+
 
 
 public class HandshakeMessage implements MessageConstants 
 {
 	// Attributes
 	private byte[] header = new byte[HANDSHAKE_HEADER_LEN];
-	private byte[] peerID = new byte[HANDSHAKE_PEERID_LEN];
-	private byte[] zeroBits = new byte[HANDSHAKE_ZEROBITS_LEN];
+	private byte[] peerInfo;
+	private byte[] filenameBytes;
+	//private byte[] zeroBits = new byte[HANDSHAKE_ZEROBITS_LEN];
 	private String messageHeader;
-	private String messagePeerID;
+	private PeerInfo messagePeerInfo;
+	private String filename;
 
-	public HandshakeMessage(){
-		
-	}
-	/**
-	 * Class constructor
-	 * 
-	 * @param Header
-	 *            - Handshake header string
-	 * @param PeerId
-	 *            - Peer ID
-	 */
-	public HandshakeMessage(String Header, String PeerId) {
+
+	public HandshakeMessage(String Header, PeerInfo Peer, String fileName) {
 
 		try {
 			this.messageHeader = Header;
@@ -30,227 +28,72 @@ public class HandshakeMessage implements MessageConstants
 			if (this.header.length > HANDSHAKE_HEADER_LEN)
 				throw new Exception("Header is too large.");
 
-			this.messagePeerID = PeerId;
-			this.peerID = PeerId.getBytes(MSG_CHARSET_NAME);
-			if (this.peerID.length > HANDSHAKE_HEADER_LEN)
-				throw new Exception("Peer ID is too large.");
+			this.messagePeerInfo = Peer;
+			this.peerInfo = Peer.encodePeer();
+			this.filename = fileName;
+			filenameBytes = fileName.getBytes();
 
-			this.zeroBits = "0000000000".getBytes(MSG_CHARSET_NAME);
 		} catch (Exception e) {
 			//peerProcess.showLog(e.toString());
 		}
 
 	}
+	//HEADER: HEADER PerInfo FileName
+    public static byte[] encodeHandshake(String filename, PeerInfo peer) {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        byte[] filenameBytes = filename.getBytes(StandardCharsets.UTF_8);
+        try {
+            //out.write(intToByte(DataMessage.MessageID.HANDSHAKE_ID.ordinal()));
+            out.write(HANDSHAKE_HEADER.getBytes());
+            out.write(peer.encodePeer());
+            out.write(intToByte(filenameBytes.length));
+            out.write(filenameBytes);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return out.toByteArray();
+    }
+	
+	public static HandshakeMessage decodeHandshake(InputStream input) throws IOException {
+		DataInputStream dis = new DataInputStream(input);
+		byte[] headerArray = new byte[HANDSHAKE_HEADER_LEN];
+		dis.read(headerArray, 0, HANDSHAKE_HEADER_LEN);
+		String header = new String(headerArray, StandardCharsets.US_ASCII);
+		//read peer Id
+		int idLen = dis.readInt();
+    	byte[] idRaw = new byte[idLen];
+    	dis.read(idRaw, 0, idLen);
+    	String pId = new String(idRaw, StandardCharsets.US_ASCII);
+    	//read peer host
+    	int hostLen = dis.readInt();
+    	byte[] hostRaw = new byte[hostLen];
+    	dis.read(hostRaw, 0, hostLen);
+    	String pHost = new String(hostRaw, StandardCharsets.US_ASCII);
+    	//read peer port
+    	int pPort = dis.readInt();
+    	PeerInfo peer = new PeerInfo(pId, pHost, pPort);
+    	int filelen = dis.readInt();
+		byte[] fileRaw = new byte[filelen];
+		dis.read(fileRaw, 0, filelen);
+ 		String filename = new String(fileRaw, StandardCharsets.US_ASCII);
 
-	/**
-	 * @param handShakeHeader
-	 *            the handShakeHeader to set
-	 */
-	public void setHeader(byte[] handShakeHeader) {
-
-		try {
-			this.messageHeader = (new String(handShakeHeader, MSG_CHARSET_NAME))
-					.toString().trim();
-			this.header = this.messageHeader.getBytes();
-		} catch (UnsupportedEncodingException e) {
-			//peerProcess.showLog(e.toString());
-		}
-	}
-
-	/**
-	 * @return the handShakeHeader
-	 */
-	public byte[] getHeader() {
-		return header;
-	}
-
-	/**
-	 * @param peerID
-	 *            the peerID to set
-	 */
-	public void setPeerID(byte[] peerID) {
-		try {
-			this.messagePeerID = (new String(peerID, MSG_CHARSET_NAME))
-					.toString().trim();
-			this.peerID = this.messagePeerID.getBytes();
-
-		} catch (UnsupportedEncodingException e) {
-			//peerProcess.showLog(e.toString());
-		}
-	}
-
-	/**
-	 * @return the peerID
-	 */
-	public byte[] getPeerID() {
-		return peerID;
-	}
-
-	/**
-	 * @param zeroBits
-	 *            the zeroBits to set
-	 */
-	public void setZeroBits(byte[] zeroBits) {
-		this.zeroBits = zeroBits;
-	}
-
-	/**
-	 * @return the zeroBits
-	 */
-	public byte[] getZeroBits() {
-		return zeroBits;
-	}
-
-	/**
-	 * @param messageHeader
-	 *            the messageHeader to set
-	 */
-	public void setHeader(String messageHeader) {
-		try {
-			this.messageHeader = messageHeader;
-			this.header = messageHeader.getBytes(MSG_CHARSET_NAME);
-		} catch (UnsupportedEncodingException e) {
-			//peerProcess.showLog(e.toString());
-		}
-	}
-
-	/**
-	 * @return the messageHeader
-	 */
+        return new HandshakeMessage(header, peer, filename);
+    }
+	
 	public String getHeaderString() {
 		return messageHeader;
 	}
-
-	/**
-	 * @param messagePeerID
-	 *            the messagePeerID to set
-	 */
-	public void setPeerID(String messagePeerID) {
-		try {
-			this.messagePeerID = messagePeerID;
-			this.peerID = messagePeerID.getBytes(MSG_CHARSET_NAME);
-		} catch (UnsupportedEncodingException e) {
-			//peerProcess.showLog(e.toString());
-		}
+	
+	public PeerInfo getPeer(){
+		return messagePeerInfo;
 	}
+	
+	public static byte[] intToByte(int i) {
+        ByteBuffer b = ByteBuffer.allocate(INT_BYTE_LEN);
+        b.order(ByteOrder.BIG_ENDIAN);
+        b.putInt(i);
+        return b.array();
+    }
 
-	/**
-	 * @return the messagePeerID
-	 */
-	public String getPeerIDString() {
-		return messagePeerID;
-	}
 
-	/**
-	 * Overrides the toString method of the Object
-	 */
-	public String toString() {
-		return ("[HandshakeMessage] : Peer Id - " + this.messagePeerID
-				+ ", Header - " + this.messageHeader);
-	}
-
-	/**
-	 * This function decodes the byte array HandshakeMessage and loads to the
-	 * object HandshakeMessage
-	 * 
-	 * @param Message
-	 *            - Message in byte array format
-	 */
-	public static HandshakeMessage decodeMessage(byte[] receivedMessage) {
-
-		HandshakeMessage handshakeMessage = null;
-		byte[] msgHeader = null;
-		byte[] msgPeerID = null;
-
-		try {
-			// Initial check
-			if (receivedMessage.length != HANDSHAKE_MSG_LEN)
-				throw new Exception("Byte array length not matching.");
-
-			// VAR initialization
-			handshakeMessage = new HandshakeMessage();
-			msgHeader = new byte[HANDSHAKE_HEADER_LEN];
-			msgPeerID = new byte[HANDSHAKE_PEERID_LEN];
-
-			// 1. Decode the received message
-			System.arraycopy(receivedMessage, 0, msgHeader, 0,
-					HANDSHAKE_HEADER_LEN);
-			System.arraycopy(receivedMessage, HANDSHAKE_HEADER_LEN
-					+ HANDSHAKE_ZEROBITS_LEN, msgPeerID, 0,
-					HANDSHAKE_PEERID_LEN);
-
-			// 2. Populate handshakeMessage entity
-			handshakeMessage.setHeader(msgHeader);
-			handshakeMessage.setPeerID(msgPeerID);
-
-		} catch (Exception e) {
-			//peerProcess.showLog(e.toString());
-			handshakeMessage = null;
-		}
-		return handshakeMessage;
-	}
-
-	/**
-	 * Encodes a given message in the format HandshakeMessage
-	 * 
-	 * @param handshakeMessage
-	 *            - HandshakeMessage message object to be encoded
-	 */
-	public static byte[] encodeMessage(HandshakeMessage handshakeMessage) {
-
-		byte[] sendMessage = new byte[HANDSHAKE_MSG_LEN];
-
-		try {
-
-			// Encode header
-			if (handshakeMessage.getHeader() == null) {
-				throw new Exception("Invalid Header.");
-
-			} else if (handshakeMessage.getHeader().length > HANDSHAKE_HEADER_LEN
-					|| handshakeMessage.getHeader().length == 0) {
-				throw new Exception("Invalid Header.");
-			} else {
-				System.arraycopy(handshakeMessage.getHeader(), 0, sendMessage,
-						0, handshakeMessage.getHeader().length);
-			}
-
-			// Encode zero bits
-			if (handshakeMessage.getZeroBits() == null) {
-				throw new Exception("Invalid zero bits field.");
-
-			} else if (handshakeMessage.getZeroBits().length > HANDSHAKE_ZEROBITS_LEN
-					|| handshakeMessage.getZeroBits().length == 0) {
-				throw new Exception("Invalid zero bits field.");
-			} else {
-				System.arraycopy(handshakeMessage.getZeroBits(), 0,
-						sendMessage, HANDSHAKE_HEADER_LEN,
-						HANDSHAKE_ZEROBITS_LEN - 1);
-			}
-
-			// Encode peer id
-			if (handshakeMessage.getPeerID() == null) 
-			{
-				throw new Exception("Invalid peer id.");
-			} 
-			else if (handshakeMessage.getPeerID().length > HANDSHAKE_PEERID_LEN
-					|| handshakeMessage.getPeerID().length == 0) 
-			{
-				throw new Exception("Invalid peer id.");
-			} 
-			else 
-			{
-				System.arraycopy(handshakeMessage.getPeerID(), 0, sendMessage,
-						HANDSHAKE_HEADER_LEN + HANDSHAKE_ZEROBITS_LEN,
-						handshakeMessage.getPeerID().length);
-			}
-
-		} 
-		catch (Exception e) 
-		{
-			//peerProcess.showLog(e.toString());
-			sendMessage = null;
-		}
-
-		return sendMessage;
-	}
 }

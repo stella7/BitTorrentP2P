@@ -49,7 +49,7 @@ public class TrackerResponse {
 			 dos.write(peer.getPeerId().getBytes(StandardCharsets.US_ASCII));
 			 dos.writeInt(peer.getHost().length());
 			 dos.write(peer.getHost().getBytes(StandardCharsets.US_ASCII));
-			 dos.writeInt(peer.getPort());;
+			 dos.writeInt(peer.getPort());
 		 }	
 	}
 	
