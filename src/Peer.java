@@ -31,6 +31,7 @@ public class Peer implements MessageConstants{
 	ConcurrentMap<Peer, Connection> connections = new ConcurrentHashMap<>();
 	static boolean isSeeder = false;
 	static BitField myBitField;
+	public static ConcurrentHashMap<String,BitField> bitMap = new ConcurrentHashMap<>();
 	
     public static void main(String[] args) throws Exception {
 
@@ -69,10 +70,8 @@ public class Peer implements MessageConstants{
 		peer.start();
 		
 		FileInfo newFile = new FileInfo(isSeeder, fileName, path, fileLen, pieceLen);
-		int numPieces = newFile.getNumPieces();
-		myBitField = new BitField(numPieces);
-		myBitField.initBitField(isSeeder);
-		
+		myBitField = newFile.getBitField();
+		bitMap.put(fileName, myBitField);
 		peer.firstRequest(trackerHost, trackerPort, fileName);
 
     }

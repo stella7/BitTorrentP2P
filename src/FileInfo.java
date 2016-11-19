@@ -4,6 +4,8 @@ import java.io.RandomAccessFile;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 
+import message.Bitfield;
+
 
 public class FileInfo {
 	public static final String MODE = "rws";    // Read and write synchronously for thread-safety
@@ -13,14 +15,14 @@ public class FileInfo {
     private final RandomAccessFile file;
     private final Path dataFolder;
     private final String filename;        // treat as unique identifier for file
-
+    private final BitField bitfield;
     public FileInfo(boolean isSeeder, String fname, String directory, long fileLen, int pieceLen) throws Exception{
     	dataFolder = Paths.get(directory);
         filename = fname;
         fileLength = fileLen;
         pieceLength = pieceLen;
         numPieces = (int) Math.ceil(((float) fileLength) / ((float) pieceLength));    // round up
-
+        bitfield.initBitField(isSeeder);
         if (!isSeeder) {        	
             file = new RandomAccessFile(dataFolder.toString() + "/" + filename, "rws");
             System.out.println("set file length to " + fileLength);
@@ -28,7 +30,6 @@ public class FileInfo {
 
         } else {
             file = new RandomAccessFile(dataFolder.toString() + "/" + filename, "r");
-
         }
     }
     
@@ -81,5 +82,8 @@ public class FileInfo {
         return numPieces;
     }
     
+    public BitField getBitField(){
+    	return bitfield;
+    }
 
 }
