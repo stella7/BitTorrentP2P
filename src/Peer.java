@@ -17,7 +17,6 @@ import org.apache.curator.retry.RetryNTimes;
 import org.apache.log4j.BasicConfigurator;
 import org.apache.zookeeper.CreateMode;
 
-import core.Welcomer;
 
 public class Peer implements MessageConstants{
     private static final int NUM_THREADS = 8;
