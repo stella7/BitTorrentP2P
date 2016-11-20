@@ -170,7 +170,15 @@ public class Tracker implements Runnable{
                 return null;
                 
 			default:
-				return null;		 
+				if (!peerLists.containsKey(fileName)) {
+                    break;
+                }
+				peers = fileLists.get(fileName);
+				if (!peers.contains(peerRequest)) {
+                    peers.add(peerRequest);
+                    fileLists.put(fileName, peers);
+                }
+				return new TrackerResponse(peers.size(), peers);	 
 		 }
 		 
 		 return new TrackerResponse(0, null);

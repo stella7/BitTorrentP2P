@@ -73,5 +73,6 @@ public class TrackerRequest {
         STARTED,
         STOPPED,
         COMPLETED,
+        EMPTY
     }
 }

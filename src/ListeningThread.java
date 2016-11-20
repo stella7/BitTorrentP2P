@@ -5,9 +5,6 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.concurrent.ConcurrentMap;
 
-import core.Connection;
-
-
 
 public class ListeningThread implements Runnable, MessageConstants{
 	private PeerInfo peer;
@@ -46,7 +43,7 @@ public class ListeningThread implements Runnable, MessageConstants{
 						log.writeLog(" makes a connection to Peer " + remotePeer.getPeerId());
 						//populate peerID to socket mapping
 						connections.put(remotePeer, Connection.init(remotePeer, peerSocket));
-						MessageSender.sendBitfield(connections.get(peer), peer, logger, datafile.getBitfield());
+						//MessageSender.sendBitfield(connections.get(peer), peer, logger, datafile.getBitfield());
 						
 					}
 					else

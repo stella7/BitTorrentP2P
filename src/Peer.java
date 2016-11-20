@@ -7,16 +7,19 @@ import java.net.Socket;
 import java.net.UnknownHostException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.CuratorFrameworkFactory;
+import org.apache.curator.framework.api.CuratorWatcher;
 import org.apache.curator.retry.RetryNTimes;
 import org.apache.log4j.BasicConfigurator;
 import org.apache.zookeeper.CreateMode;
-
+import org.apache.zookeeper.WatchedEvent;
+import org.apache.zookeeper.Watcher.Event;
 
 public class Peer implements MessageConstants{
     private static final int NUM_THREADS = 8;
@@ -32,6 +35,10 @@ public class Peer implements MessageConstants{
 	static ConcurrentMap<PeerInfo, Connection> connectionMap = new ConcurrentHashMap<>();
 	static boolean isSeeder = false;
 	static BitField myBitField;
+	static String fileName = "";
+	static String trackerHost = "ecelinux2";
+    static int trackerPort = 10123;
+    static PeerTracker peerTracker;
 	public static ConcurrentHashMap<String,BitField> bitMap = new ConcurrentHashMap<>();
 	
     public static void main(String[] args) throws Exception {
@@ -43,9 +50,7 @@ public class Peer implements MessageConstants{
     	String hostFull = InetAddress.getLocalHost().getHostName();
         String host = hostFull.substring(0, hostFull.indexOf("."));
         myPeer = new PeerInfo(peerId, host, port);
-        String trackerHost = "ecelinux2";
-        int trackerPort = 10123;
-        String fileName = "";
+        
         String path = "";
         long fileLen = 0;
         int pieceLen = 256 * 1024;
@@ -73,11 +78,13 @@ public class Peer implements MessageConstants{
 		FileInfo newFile = new FileInfo(isSeeder, fileName, path, fileLen, pieceLen);
 		myBitField = newFile.getBitField();
 		bitMap.put(fileName, myBitField);
+		peerTracker = new PeerTracker(trackerHost,trackerPort,myPeer, newFile);
 		//find seeders for the filename and connect to those peers, send HANDSHAKE message
-		peer.firstRequest(trackerHost, trackerPort, fileName);
+		peer.firstRequest(peerTracker);
 		//start listening port to accept connection from newly joined peers
 		new Thread(new ListeningThread(myPeer, BACKLOG, connectionMap, log, newFile)).start();
-		
+		//set watcher on zknode, if child node changed, peer will send request to tracker
+		new Thread(peer.new peerNodeChanged()).start();
     }
     
 	void start() throws Exception {
@@ -102,31 +109,58 @@ public class Peer implements MessageConstants{
 		 .withMode(CreateMode.EPHEMERAL)
 		 .forPath("/" + zkNode + "/" + myPeer.getPeerId(), String.format("%s:%s", myPeer.getHost(), myPeer.getPort()).getBytes());
 	}
+	
+	private class peerNodeChanged implements Runnable{
+		public void run() {
+			try {
+				curClient.checkExists().usingWatcher(new peerWatcher()).forPath("/" + zkNode);
+			} catch (Exception e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+		}			
+    }
+	
+	private class peerWatcher implements CuratorWatcher {
+    	public void process(WatchedEvent event) {
+    		if(event.getType() == Event.EventType.NodeChildrenChanged) {
+    			new Thread(new peerNodeChanged()).start();
+    			log.writeLog("send REQUEST to tracker for updating peer list");
+    			try {
+					TrackerResponse resp = peerTracker.getRequest(TrackerRequest.RequestEvent.EMPTY);
+					List<PeerInfo> peers = resp.getPeers();
+					for (PeerInfo peer : connectionMap.keySet()) {
+		                if (!peers.contains(peer)) {
+		                    Connection connection = connectionMap.get(peer);
+		                    connectionMap.remove(peer);
+		                    log.writeLog("removing peer " + peer + " for file " + fileName);
+		                    connection.getSocket().close();
+		                }
+		            }
+				} catch (IOException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+    		}
+    	}
+	}
     
-    public void firstRequest(String trackerHost, int trackerPort, String fileName) throws Exception{
-    	TrackerRequest firstReq;
+    public void firstRequest(PeerTracker peerTracker) throws Exception{
     	TrackerResponse firstResp;
-		try(Socket socket = new Socket(trackerHost, trackerPort)) {
-			OutputStream out = socket.getOutputStream();
-			InputStream in = socket.getInputStream();
-			if(isSeeder){
-				firstReq = new TrackerRequest(TrackerRequest.RequestEvent.COMPLETED, myPeer, fileName);
-				log.writeLog("send COMPLETED Request");
-				firstReq.sendRequest(out);
-				firstResp = TrackerResponse.decodeResponse(in);
-				log.writeLog("get peers information from COMPLETED Response");
+		
+		if(isSeeder){
+			log.writeLog("send COMPLETED Request");
+			firstResp = peerTracker.getRequest(TrackerRequest.RequestEvent.COMPLETED);
+			log.writeLog("get peers information from COMPLETED Response");
 
-			}else{
-				firstReq = new TrackerRequest(TrackerRequest.RequestEvent.STARTED, myPeer, fileName);
-				log.writeLog("send STARTED Request");
-				firstReq.sendRequest(out);
-				firstResp = TrackerResponse.decodeResponse(in);
-				log.writeLog("get peers information from STARTED Response");				
-			}			
-		}
+		}else{
+			log.writeLog("send STARTED Request");
+			firstResp = peerTracker.getRequest(TrackerRequest.RequestEvent.STARTED);
+			log.writeLog("get peers information from STARTED Response");				
+		}			
 		List<PeerInfo> peers = firstResp.getPeers();
 		if(peers.isEmpty()){
-			log.writeLog("does NOT find  seeder for file: " + fileName);
+			log.writeLog("does NOT find  seeder for file: " + peerTracker.getFile().getFilename());
 		}else{
 			connectToPeers(peers);
 		}

@@ -4,8 +4,6 @@ import java.io.RandomAccessFile;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 
-import message.Bitfield;
-
 
 public class FileInfo {
 	public static final String MODE = "rws";    // Read and write synchronously for thread-safety
@@ -22,6 +20,7 @@ public class FileInfo {
         fileLength = fileLen;
         pieceLength = pieceLen;
         numPieces = (int) Math.ceil(((float) fileLength) / ((float) pieceLength));    // round up
+        bitfield = new BitField(numPieces);
         bitfield.initBitField(isSeeder);
         if (!isSeeder) {        	
             file = new RandomAccessFile(dataFolder.toString() + "/" + filename, "rws");

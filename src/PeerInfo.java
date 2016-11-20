@@ -8,8 +8,6 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.charset.StandardCharsets;
 
-import message.MessageBuilder;
-
 public class PeerInfo {
 	public String peerId;
 	public String peerHost;
@@ -67,7 +65,7 @@ public class PeerInfo {
 		return out.toByteArray();
 	}
 	
-	public PeerInfo decodePeer(InputStream in){
+	public PeerInfo decodePeer(InputStream in) throws IOException{
 		DataInputStream dis = new DataInputStream(in);
 		//read peer Id
 		int idLen = dis.readInt();

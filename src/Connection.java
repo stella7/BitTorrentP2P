@@ -1,7 +1,5 @@
 import java.net.Socket;
 
-import core.State;
-
 
 public class Connection {
 	private PeerInfo myPeer; 
@@ -32,6 +30,10 @@ public class Connection {
     	State download = new State(true, false);
     	State upload = new State(true, false);
     	return new Connection(peer, socket, true, download, upload);
+    }
+    
+    public Socket getSocket() {
+        return myPeerSocket;
     }
 
 }
