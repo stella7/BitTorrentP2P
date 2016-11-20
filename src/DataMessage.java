@@ -1,7 +1,5 @@
 
 
-import java.net.InetAddress;
-
 public class DataMessage {
     private MessageID messageID;
     private int pieceIndex;
@@ -10,7 +8,7 @@ public class DataMessage {
 
     private Request request;
     private Piece piece;
-    private Bitfield bitfield;
+    private BitField bitfield;
 
     // CHOKE, UNCHOKE, INTERESTED, NOT_INTERESTED
     public DataMessage(MessageID messageID) {
@@ -31,7 +29,7 @@ public class DataMessage {
     }
 
     // BITFIELD
-    public DataMessage(MessageID messageID, Bitfield bitfield) {
+    public DataMessage(MessageID messageID, BitField bitfield) {
         this.messageID = messageID;
         this.bitfield = bitfield;
     }
@@ -64,7 +62,7 @@ public class DataMessage {
         return piece;
     }
 
-    public Bitfield getBitfield() {
+    public BitField getBitfield() {
         return bitfield;
     }
 
@@ -72,12 +70,8 @@ public class DataMessage {
         return messageID;
     }
 
-    public InetAddress getPeerIp() {
-        return peerIp;
-    }
-
-    public int getPeerPort() {
-        return peerPort;
+    public PeerInfo getPeer() {
+        return peer;
     }
 
     public enum MessageID {

@@ -17,6 +17,8 @@ import org.apache.curator.retry.RetryNTimes;
 import org.apache.log4j.BasicConfigurator;
 import org.apache.zookeeper.CreateMode;
 
+import core.Welcomer;
+
 public class Peer implements MessageConstants{
     private static final int NUM_THREADS = 8;
     private static final int BACKLOG = 10;
@@ -28,7 +30,7 @@ public class Peer implements MessageConstants{
     static final String ZK_CONNECT_STR = "snorkel.uwaterloo.ca:2181";
 	static String zkNode = System.getProperty("user.name");
 	private static CuratorFramework curClient;
-	ConcurrentMap<PeerInfo, Connection> connectionMap = new ConcurrentHashMap<>();
+	static ConcurrentMap<PeerInfo, Connection> connectionMap = new ConcurrentHashMap<>();
 	static boolean isSeeder = false;
 	static BitField myBitField;
 	public static ConcurrentHashMap<String,BitField> bitMap = new ConcurrentHashMap<>();
@@ -72,8 +74,11 @@ public class Peer implements MessageConstants{
 		FileInfo newFile = new FileInfo(isSeeder, fileName, path, fileLen, pieceLen);
 		myBitField = newFile.getBitField();
 		bitMap.put(fileName, myBitField);
+		//find seeders for the filename and connect to those peers, send HANDSHAKE message
 		peer.firstRequest(trackerHost, trackerPort, fileName);
-
+		//start listening port to accept connection from newly joined peers
+		new Thread(new ListeningThread(myPeer, BACKLOG, connectionMap, log, newFile)).start();
+		
     }
     
 	void start() throws Exception {
@@ -122,15 +127,10 @@ public class Peer implements MessageConstants{
 		}
 		List<PeerInfo> peers = firstResp.getPeers();
 		if(peers.isEmpty()){
-			log.writeLog("find NO seeder for file: " + fileName);
+			log.writeLog("does NOT find  seeder for file: " + fileName);
 		}else{
 			connectToPeers(peers);
 		}
-		
-		
-    	while(true){
-    		
-    	}
     }
     
     public void connectToPeers(List<PeerInfo> peersToConnect){
@@ -142,6 +142,7 @@ public class Peer implements MessageConstants{
 					socket = new Socket(peer.getHost(), peer.getPort());
 					Connection connection = Connection.init(peer, socket);
 					connectionMap.put(peer, connection);
+					
 					//To be continued...
 					
 				} catch (UnknownHostException e) {

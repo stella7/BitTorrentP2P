@@ -34,26 +34,24 @@ public class ListeningThread implements Runnable, MessageConstants{
 	                Socket peerSocket = socket.accept();
 	                log.writeLog("accepted new connection from " + peerSocket.getInetAddress() + " at port " + peerSocket.getPort());
 	                InputStream in = peerSocket.getInputStream();
-	                OutputStream out = peerSocket.getOutputStream();
+	                //OutputStream out = peerSocket.getOutputStream();
 
 	                HandshakeMessage handshakeMessage = HandshakeMessage.decodeHandshake(in);
 	                if(handshakeMessage.getHeaderString().equals(MessageConstants.HANDSHAKE_HEADER))
 					{
 						
 						PeerInfo remotePeer = handshakeMessage.getPeer();
-						
-						log.writeLog(" makes a connection to Peer " + remotePeer.getPeerId());
-						
+																
 						log.writeLog(" Received a HANDSHAKE message from Peer " + remotePeer.getPeerId());
-						
+						log.writeLog(" makes a connection to Peer " + remotePeer.getPeerId());
 						//populate peerID to socket mapping
 						connections.put(remotePeer, Connection.init(remotePeer, peerSocket));
 						MessageSender.sendBitfield(connections.get(peer), peer, logger, datafile.getBitfield());
-						break;
+						
 					}
 					else
 					{
-						log.writeLog("HANDSHAKE header does NOT match, reject");
+						log.writeLog("HANDSHAKE header does NOT match, reject connection from peer " + handshakeMessage.getPeer().getPeerId());
 						continue;
 					}
 	
