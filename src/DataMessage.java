@@ -9,6 +9,7 @@ public class DataMessage {
     private Request request;
     private Piece piece;
     private BitField bitfield;
+    private HandshakeMessage handshakeMessage;
 
     // CHOKE, UNCHOKE, INTERESTED, NOT_INTERESTED
     public DataMessage(MessageID messageID) {
@@ -16,10 +17,9 @@ public class DataMessage {
     }
 
     // HANDSHAKE
-    public DataMessage(MessageID messageID, String filename, PeerInfo peer) {
+    public DataMessage(MessageID messageID, HandshakeMessage handshakeMessage) {
         this.messageID = messageID;
-        this.filename = filename;
-        this.peer = peer;
+        this.handshakeMessage = handshakeMessage;
     }
 
     // HAVE
@@ -52,6 +52,10 @@ public class DataMessage {
 
     public String getFilename() {
         return filename;
+    }
+    
+    public HandshakeMessage getHandshakeMessage(){
+    	return handshakeMessage;
     }
 
     public Request getRequest() {

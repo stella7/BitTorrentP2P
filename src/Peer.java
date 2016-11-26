@@ -36,24 +36,28 @@ public class Peer implements MessageConstants{
 	static boolean isSeeder = false;
 	static BitField myBitField;
 	static String fileName = "";
-	static String trackerHost = "ecelinux2";
-    static int trackerPort = 10123;
+	static String trackerHost;
+    static int trackerPort;
     static PeerTracker peerTracker;
+    static MetaFile metaFile;
+    static long fileLen;
+    static int pieceLen;
+    static FileInfo newFile;
 	public static ConcurrentHashMap<String,BitField> bitMap = new ConcurrentHashMap<>();
-	
+	static final int PIECE_LEN = 256 * 1024;
     public static void main(String[] args) throws Exception {
 
     	BasicConfigurator.configure();
     	String peerId = args[0];
     	log = new Logger("peer_" + peerId);
-    	int port = Integer.parseInt(args[1]);
+    	int myPort = Integer.parseInt(args[1]);
     	String hostFull = InetAddress.getLocalHost().getHostName();
-        String host = hostFull.substring(0, hostFull.indexOf("."));
-        myPeer = new PeerInfo(peerId, host, port);
+        String myHost = hostFull.substring(0, hostFull.indexOf("."));
+        myPeer = new PeerInfo(peerId, myHost, myPort);
         
         String path = "";
-        long fileLen = 0;
-        int pieceLen = 256 * 1024;
+        //long fileLen = 0;
+        //int pieceLen = 256 * 1024;
     	if (args.length == 4) { // start as leecher
     		fileName = args[2];
     		path = args[3];
@@ -62,21 +66,30 @@ public class Peer implements MessageConstants{
     		trackerPort = Integer.parseInt(args[3]);
     		Path filePath = Paths.get(args[4]);
     		File fileData = filePath.toFile();
-    		fileLen = fileData.length();    		
+    		fileLen = fileData.length();  
+    		
+    		System.out.println(fileLen);
+    		
     		fileName = filePath.getFileName().toString();
     		path = filePath.getParent().toString();
+    		pieceLen = PIECE_LEN;
     		isSeeder = true;
     	}else{
     		System.out.println(args.length);
             System.out.println(CMD_USAGE);
             System.exit(0);
     	}
-
+    	
+    	System.out.println(isSeeder);
 		Peer peer = new Peer();
 		peer.start();
 		
-		FileInfo newFile = new FileInfo(isSeeder, fileName, path, fileLen, pieceLen);
+		System.out.println(trackerHost + trackerPort);
+		
+		
+		newFile = new FileInfo(isSeeder, fileName, path, fileLen, pieceLen);
 		myBitField = newFile.getBitField();
+		System.out.println(myBitField.getBitField());
 		bitMap.put(fileName, myBitField);
 		peerTracker = new PeerTracker(trackerHost,trackerPort,myPeer, newFile);
 		//find seeders for the filename and connect to those peers, send HANDSHAKE message
@@ -107,7 +120,26 @@ public class Peer implements MessageConstants{
 		curClient.create()
 		 .creatingParentsIfNeeded()
 		 .withMode(CreateMode.EPHEMERAL)
-		 .forPath("/" + zkNode + "/" + myPeer.getPeerId(), String.format("%s:%s", myPeer.getHost(), myPeer.getPort()).getBytes());
+		 .forPath("/" + zkNode + "/peer/" + myPeer.getPeerId(), String.format("%s:%s", myPeer.getHost(), myPeer.getPort()).getBytes());
+		
+		if(isSeeder){
+			metaFile = new MetaFile(fileName, pieceLen, fileLen, trackerHost, trackerPort);
+			curClient.create()
+			 .creatingParentsIfNeeded()
+			 .withMode(CreateMode.PERSISTENT)
+			 .forPath("/" + zkNode + "/file/" + fileName, metaFile.createMetaFile());
+		}else{
+			byte[] data = curClient.getData().forPath("/" + zkNode + "/file/" + fileName);
+			String strData = new String(data);
+		    String[] primary = strData.split(";");
+		    String[] info = primary[0].split(",");
+		    String[] announce = primary[1].split(",");
+		    pieceLen = Integer.parseInt(info[1]);
+		    fileLen = Long.parseLong(info[2]);
+		    trackerHost = announce[0];
+		    trackerPort = Integer.parseInt(announce[1]);
+		    metaFile = new MetaFile(fileName, pieceLen, fileLen, trackerHost, trackerPort);
+		}
 	}
 	
 	private class peerNodeChanged implements Runnable{
@@ -125,7 +157,7 @@ public class Peer implements MessageConstants{
     	public void process(WatchedEvent event) {
     		if(event.getType() == Event.EventType.NodeChildrenChanged) {
     			new Thread(new peerNodeChanged()).start();
-    			log.writeLog("send REQUEST to tracker for updating peer list");
+    			log.writeLog("send EMPTY request to tracker for updating peer list");
     			try {
 					TrackerResponse resp = peerTracker.getRequest(TrackerRequest.RequestEvent.EMPTY);
 					List<PeerInfo> peers = resp.getPeers();
@@ -167,15 +199,16 @@ public class Peer implements MessageConstants{
     }
     
     public void connectToPeers(List<PeerInfo> peersToConnect){
-    	for (PeerInfo peer : peersToConnect) {
-            if (!myPeer.equals(peer)) {
-                log.writeLog("Initializing connection to peer: " + peer);
+    	for (PeerInfo remotePeer : peersToConnect) {
+            if (!myPeer.equals(remotePeer)) {
+                log.writeLog("Initializing connection to peer: " + remotePeer);
                 Socket socket;
 				try {
-					socket = new Socket(peer.getHost(), peer.getPort());
-					Connection connection = Connection.init(peer, socket);
-					connectionMap.put(peer, connection);
-					
+					socket = new Socket(remotePeer.getHost(), remotePeer.getPort());
+					Connection connection = Connection.init(myPeer, socket);
+					connectionMap.put(remotePeer, connection);
+					MessageProcessor.sendHandshake(connection, remotePeer, log, newFile);
+					MessageProcessor.sendBitfield(connection, remotePeer, log, myBitField);
 					//To be continued...
 					
 				} catch (UnknownHostException e) {

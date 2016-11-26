@@ -1,6 +1,5 @@
 import java.net.Socket;
 
-
 public class Connection {
 	private PeerInfo myPeer; 
 	private Socket myPeerSocket;
@@ -32,8 +31,40 @@ public class Connection {
     	return new Connection(peer, socket, true, download, upload);
     }
     
+    public boolean getIsConnected() {
+        return isConnected;
+    }
+    
     public Socket getSocket() {
         return myPeerSocket;
+    }
+    
+    public PeerInfo getPeer(){
+    	return myPeer;
+    }
+    
+    public State getDownloadState() {
+        return downloadState;
+    }
+
+    public State getUploadState() {
+        return uploadState;
+    }
+    
+    public boolean canDownloadFrom() {
+        return downloadState.isInterested() && !downloadState.isChoked();
+    }
+
+    public boolean canUploadTo() {
+        return uploadState.isInterested() && uploadState.isChoked();
+    }
+    
+    public BitField getBitfield() {
+        return bitfield;
+    }
+
+    public void setBitfield(BitField bitfield) {
+        this.bitfield = bitfield;
     }
 
 }

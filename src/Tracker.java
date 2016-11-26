@@ -147,11 +147,11 @@ public class Tracker implements Runnable{
                     log.writeLog("accept COMPLETED Request from peer: " + peerRequest.getPeerId() + ". Submitting file: " + fileName);
                     peers = new ArrayList<>();
                     peers.add(peerRequest);
-                    fileLists.put(fileName, peers);                
-                    showFiles();
+                    fileLists.put(fileName, peers);                                    
                     return new TrackerResponse(1, peers);
                 }
-		 		return null;
+		 		showFiles();
+		 		return new TrackerResponse(fileLists.get(fileName).size(), fileLists.get(fileName));
 		 	
 		 	case STOPPED:
                 log.writeLog("peer: " + peerRequest.getPeerId() + "STOPPED");
@@ -188,7 +188,7 @@ public class Tracker implements Runnable{
 		for(Map.Entry<String, List<PeerInfo>> entry : fileLists.entrySet()){
 			String file = entry.getKey();
 			for(PeerInfo peer : entry.getValue()){
-				System.out.println(file + ":" + peer);
+				System.out.println(file + ":" + peer.getPeerId());
 			}
 		}
 	}
@@ -197,7 +197,7 @@ public class Tracker implements Runnable{
 		//for(Map.Entry<String, List<String>> entry : peerLists.entrySet()){
 		//	String peerId = entry.getKey();
 			try {
-				curClient.checkExists().usingWatcher(new peerWatcher(peerId)).forPath("/" + zkNode + "/" + peerId);
+				curClient.checkExists().usingWatcher(new peerWatcher(peerId)).forPath("/" + zkNode + "/peer/" + peerId);
 			} catch (Exception e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
@@ -225,10 +225,14 @@ public class Tracker implements Runnable{
 					for(Iterator<PeerInfo>  iterator = peers.iterator(); iterator.hasNext();){
 						PeerInfo peer = iterator.next();
 						if(peer.getPeerId().equals(peerDeleted)){
-							iterator.remove();;
+							iterator.remove();
 						}
-					} 
-					fileLists.put(file, peers);
+					}
+					if(peers.isEmpty()){
+						fileLists.remove(file);
+					}else{
+						fileLists.put(file, peers);
+					}					
 					//System.out.println(peers.size());
     			}
     			peerLists.remove(peerDeleted);

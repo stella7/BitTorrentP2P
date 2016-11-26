@@ -1,406 +1,250 @@
-import java.io.File;
+
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.io.OutputStream;
-import java.io.RandomAccessFile;
+import java.io.InputStream;
 import java.net.Socket;
-import java.util.Date;
-import java.util.Enumeration;
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
+import java.util.BitSet;
 
-
-public class MessageProcessor implements Runnable, MessageConstants 
-{
-	private static String ownPeerID = null;
-	public static int peerState = -1;
-	RandomAccessFile raf;
+public class MessageProcessor implements MessageConstants{
 	
-	// constructor
-	public MessageProcessor(String pownPeerID)
-	{
-		ownPeerID = pownPeerID;
-	}
+	public static void sendHandshake(Connection connection, PeerInfo peer, Logger log, FileInfo datafile) {
+		HandshakeMessage hsm = new HandshakeMessage(HANDSHAKE_HEADER, connection.getPeer(), datafile.getFilename());
+		byte[] handshakeMessage = hsm.encodeHandshake();
+        sendMessage(connection.getSocket(), handshakeMessage);
+        log.writeLog("send HANDSHAKE to " + peer.getPeerId());
+    }
 	
-	// constructor
-	public MessageProcessor()
-	{
-		ownPeerID = null;
-	}
-	
-	public void pTS(String dataType, int state)
-	{
-		//peerProcess.showLog("Message Processor : msgType = "+ dataType + " State = "+state);
-	}
-
-	public void run()
-	{
-		DataMessage d;
-		DataMessageWrapper dataWrapper;
-		String msgType;
-		String rPeerId;
-				
-		while(true)
-		{
-			dataWrapper  = peerProcess.removeFromMsgQueue();
-			while(dataWrapper == null)
-			{
-				Thread.currentThread();
-				try {
-					Thread.sleep(500);
-				} catch (InterruptedException e) {
-					
-					e.printStackTrace();
-				}
-				dataWrapper  = peerProcess.removeFromMsgQueue();
-			}
+	public static void sendBitfield(Connection connection, PeerInfo peer, Logger log, BitField bitfield) {
+		byte[] bitfieldByte = bitfield.getBitField().toByteArray();
+		ByteArrayOutputStream message = new ByteArrayOutputStream();
+        try {
+			message.write(intToByte(DataMessage.MessageID.BITFIELD_ID.ordinal()));
+			message.write(intToByte(bitfield.numPieces));
+	        message.write(bitfieldByte);
 			
-			d = dataWrapper.getDataMsg();
-			
-			msgType = d.getMessageTypeString();
-			rPeerId = dataWrapper.getFromPeerID();
-			int state = peerProcess.remotePeerInfoHash.get(rPeerId).state;
-			
-			//pTS(msgType, state);
-			if(msgType.equals(DATA_MSG_HAVE) && state != 14)
-			{
-				// LOG 7: TODO HAVE MESSAGE FOR WHICH PIECE ??
-				peerProcess.showLog(peerProcess.peerID + " receieved HAVE message from Peer " + rPeerId); 
-				if(isInterested(d, rPeerId))
-				{
-					//peerProcess.showLog(peerProcess.peerID + " is interested in Peer " + rPeerId);
-					sendInterested(peerProcess.peerIDToSocketMap.get(rPeerId), rPeerId);
-					peerProcess.remotePeerInfoHash.get(rPeerId).state = 9;
-				}	
-				else
-				{
-					//peerProcess.showLog(peerProcess.peerID + "is not interested " + rPeerId);
-					sendNotInterested(peerProcess.peerIDToSocketMap.get(rPeerId), rPeerId);
-					peerProcess.remotePeerInfoHash.get(rPeerId).state = 13;
-				}
-			}
-			else if(msgType.equals(DATA_MSG_BITFIELD) && state == 2)
-			{
-				peerProcess.showLog(peerProcess.peerID + " receieved a BITFIELD message from Peer " + rPeerId);
-				sendBitField(peerProcess.peerIDToSocketMap.get(rPeerId), rPeerId);
-				peerProcess.remotePeerInfoHash.get(rPeerId).state = 3;
-			}
-			else if(msgType.equals(DATA_MSG_NOTINTERESTED) && state == 3)
-			{
-				// LOG 9:
-				peerProcess.showLog(peerProcess.peerID + " receieved a NOT INTERESTED message from Peer " + rPeerId);
-				peerProcess.remotePeerInfoHash.get(rPeerId).isInterested = 0;
-				peerProcess.remotePeerInfoHash.get(rPeerId).state = 5;
-				peerProcess.remotePeerInfoHash.get(rPeerId).isHandShaked = 1;
-			}
-			else if(msgType.equals(DATA_MSG_INTERESTED) && state == 3){	
-				// LOG 8:
-				peerProcess.showLog(peerProcess.peerID + " receieved an INTERESTED message from Peer " + rPeerId);
-				peerProcess.remotePeerInfoHash.get(rPeerId).isInterested = 1;
-				peerProcess.remotePeerInfoHash.get(rPeerId).isHandShaked = 1;
-				
-				if(!peerProcess.preferedNeighbors.containsKey(rPeerId) && !peerProcess.unchokedNeighbors.containsKey(rPeerId))
-				{
-					sendChoke(peerProcess.peerIDToSocketMap.get(rPeerId), rPeerId);
-					peerProcess.remotePeerInfoHash.get(rPeerId).isChoked = 1;
-					peerProcess.remotePeerInfoHash.get(rPeerId).state  = 6;
-				}
-				else
-				{
-					peerProcess.remotePeerInfoHash.get(rPeerId).isChoked = 0;
-					sendUnChoke(peerProcess.peerIDToSocketMap.get(rPeerId), rPeerId);
-					peerProcess.remotePeerInfoHash.get(rPeerId).state = 4 ;
-				}
-			}
-			else if(msgType.equals(DATA_MSG_REQUEST) && state == 4)
-			{
-				//peerProcess.showLog(peerProcess.peerID + " receieved a REQUEST message from Peer " + rPeerId);
-				sendPeice(peerProcess.peerIDToSocketMap.get(rPeerId), d, rPeerId);
-
-				
-				// Decide to send CHOKE or UNCHOKE message
-				if(!peerProcess.preferedNeighbors.containsKey(rPeerId) && !peerProcess.unchokedNeighbors.containsKey(rPeerId))
-				{
-					
-					sendChoke(peerProcess.peerIDToSocketMap.get(rPeerId), rPeerId);
-					peerProcess.remotePeerInfoHash.get(rPeerId).isChoked = 1;
-					peerProcess.remotePeerInfoHash.get(rPeerId).state = 6;
-				} 
-			}
-			else if((msgType.equals(DATA_MSG_BITFIELD) && state == 8)
-					|| (msgType.equals(DATA_MSG_HAVE) && state == 14))
-			{
-	
-				//Decide if interested or not.
-				if(isInterested(d,rPeerId))
-				{
-					//peerProcess.showLog(peerProcess.peerID + " is interested in Peer " + rPeerId);
-					sendInterested(peerProcess.peerIDToSocketMap.get(rPeerId), rPeerId);
-					peerProcess.remotePeerInfoHash.get(rPeerId).state = 9;
-				}	
-				else
-				{
-					//peerProcess.showLog(peerProcess.peerID + " is not interested in Peer " + rPeerId);
-					sendNotInterested(peerProcess.peerIDToSocketMap.get(rPeerId), rPeerId);
-					peerProcess.remotePeerInfoHash.get(rPeerId).state = 13;
-				}
-			}
-			else if(msgType.equals(DATA_MSG_CHOKE) && state == 9)
-			{
-				// LOG 6:
-				peerProcess.showLog(peerProcess.peerID + " is CHOKED by Peer " + rPeerId);
-				peerProcess.remotePeerInfoHash.get(rPeerId).state = 14;
-			}
-			else if(msgType.equals(DATA_MSG_UNCHOKE) && state == 9)
-			{
-				// LOG 5:
-				peerProcess.showLog(peerProcess.peerID + " is UNCHOKED by Peer " + rPeerId);
-				int firstdiff = peerProcess.ownBitField.returnFirstDiff(peerProcess.remotePeerInfoHash.get(rPeerId).bitField);
-				if(firstdiff != -1)
-				{
-					//peerProcess.showLog(peerProcess.peerID + " is Requesting PIECE " + firstdiff + " from peer " + rPeerId);
-					sendRequest(peerProcess.peerIDToSocketMap.get(rPeerId), firstdiff, rPeerId);
-					peerProcess.remotePeerInfoHash.get(rPeerId).state = 11;
-					// Get the time when the request is being sent.
-					peerProcess.remotePeerInfoHash.get(rPeerId).startTime = new Date();
-				}
-				else
-					peerProcess.remotePeerInfoHash.get(rPeerId).state = 13;
-	
-			}
-			else if(msgType.equals(DATA_MSG_PIECE) && state == 11)
-			{
-				byte[] buffer = d.getPayload();
-					
-				
-				peerProcess.remotePeerInfoHash.get(rPeerId).finishTime = new Date();
-				long timeLapse = peerProcess.remotePeerInfoHash.get(rPeerId).finishTime.getTime() - 
-							peerProcess.remotePeerInfoHash.get(rPeerId).startTime.getTime() ;
-				
-				peerProcess.remotePeerInfoHash.get(rPeerId).dataRate = ((double)(buffer.length + DATA_MSG_LEN + DATA_MSG_TYPE)/(double)timeLapse) * 100;
-				
-				Piece p = Piece.decodePiece(buffer);
-				peerProcess.ownBitField.updateBitField(rPeerId, p);			
-				
-				int toGetPeiceIndex = peerProcess.ownBitField.returnFirstDiff(peerProcess.remotePeerInfoHash.get(rPeerId).bitField);
-				if(toGetPeiceIndex != -1)
-				{
-					//peerProcess.showLog(peerProcess.peerID + " Requesting piece " + toGetPeiceIndex + " from peer " + rPeerId);
-					sendRequest(peerProcess.peerIDToSocketMap.get(rPeerId),toGetPeiceIndex, rPeerId);
-					peerProcess.remotePeerInfoHash.get(rPeerId).state  = 11;
-					// Get the time when the request is being sent.
-					peerProcess.remotePeerInfoHash.get(rPeerId).startTime = new Date();
-				}
-				else
-					peerProcess.remotePeerInfoHash.get(rPeerId).state = 13;
-				
-				//updates remote peerInfo
-				peerProcess.readPeerInfoAgain();
-				
-				Enumeration<String> keys = peerProcess.remotePeerInfoHash.keys();
-				while(keys.hasMoreElements())
-				{
-					String key = (String)keys.nextElement();
-					RemotePeerInfo pref = peerProcess.remotePeerInfoHash.get(key);
-					
-					if(key.equals(peerProcess.peerID))continue;
-					//peerProcess.showLog(peerProcess.peerID + ":::: isCompleted =" + pref.isCompleted + " isInterested =" + pref.isInterested + " isChoked =" + pref.isChoked);
-					if (pref.isCompleted == 0 && pref.isChoked == 0 && pref.isHandShaked == 1)
-					{
-						//peerProcess.showLog(peerProcess.peerID + " isCompleted =" + pref.isCompleted + " isInterested =" + pref.isInterested + " isChoked =" + pref.isChoked);
-						sendHave(peerProcess.peerIDToSocketMap.get(key), key);
-						peerProcess.remotePeerInfoHash.get(key).state = 3;
-						
-					} 
-					
-				}
-								
-				buffer = null;
-				d = null;
-	
-			}
-			else if(msgType.equals(DATA_MSG_CHOKE) && state == 11)
-			{
-				// LOG 6:
-				peerProcess.showLog(peerProcess.peerID + " is CHOKED by Peer " + rPeerId);
-				peerProcess.remotePeerInfoHash.get(rPeerId).state = 14;
-			}
-			else if(msgType.equals(DATA_MSG_UNCHOKE) && state == 14)
-			{
-				// LOG 5:
-				peerProcess.showLog(peerProcess.peerID + " is UNCHOKED by Peer " + rPeerId);
-				peerProcess.remotePeerInfoHash.get(rPeerId).state = 14;
-			}	
-		}
-	}
-
-
-	private void sendRequest(Socket socket, int peiceNo, String remotePeerID) {
-
-		// Byte2int....
-		byte[] pieceByte = new byte[MessageConstants.PIECE_INDEX_LEN];
-		for (int i = 0; i < MessageConstants.PIECE_INDEX_LEN; i++) {
-			pieceByte[i] = 0;
-		}
-
-		//peerProcess.showLog(peerProcess.peerID
-		//		+ " sending REQUEST message for pieceIndex " + peiceNo
-		//		+ " to Peer " + remotePeerID);
-
-		byte[] pieceIndexByte = ConversionUtil.intToByteArray(peiceNo);
-		System.arraycopy(pieceIndexByte, 0, pieceByte, 0,
-						pieceIndexByte.length);
-		DataMessage d = new DataMessage(DATA_MSG_REQUEST, pieceByte);
-		byte[] b = DataMessage.encodeMessage(d);
-		SendData(socket, b);
-
-		pieceByte = null;
-		pieceIndexByte = null;
-		b = null;
-		d = null;
-	}
-
-	private void sendPeice(Socket socket, DataMessage d, String remotePeerID)  //d == requestmessage
-	{
-		byte[] bytePieceIndex = d.getPayload();
-		
-		//if(bytePieceIndex.length != 4) System.out.println(" data Payload in Request message not 4 bytes");		
-		//System.out.println("peice index size = " + bytePieceIndex.length);
-		int pieceIndex = ConversionUtil.byteArrayToInt(bytePieceIndex);
-		
-		peerProcess.showLog(peerProcess.peerID + " sending a PIECE message for piece " + pieceIndex + " to Peer " + remotePeerID);
-		
-		byte[] byteRead = new byte[CommonProperties.pieceSize];
-		int noBytesRead = 0;
-		
-		File file = new File(peerProcess.peerID,CommonProperties.fileName);
-		try 
-		{
-			raf = new RandomAccessFile(file,"r");
-			//System.out.println("PieceIndex = "+pieceIndex);
-			//System.out.println("PieceIndex * pieceSize = "  + (pieceIndex*CommonProperties.pieceSize));
-			raf.seek(pieceIndex*CommonProperties.pieceSize);
-			noBytesRead = raf.read(byteRead, 0, CommonProperties.pieceSize);
-			//System.out.println("bytes read = "+noBytesRead);
-		} 
-		catch (IOException e) 
-		{
-			peerProcess.showLog(peerProcess.peerID + " ERROR in reading the file : " +  e.toString());
-		}
-		if( noBytesRead == 0)
-		{
-			peerProcess.showLog(peerProcess.peerID + " ERROR :  Zero bytes read from the file !");
-		}
-		else if (noBytesRead < 0)
-		{
-			peerProcess.showLog(peerProcess.peerID + " ERROR : File could not be read properly.");
-		}
-		
-		byte[] buffer = new byte[noBytesRead + MessageConstants.PIECE_INDEX_LEN];
-		System.arraycopy(bytePieceIndex, 0, buffer, 0, MessageConstants.PIECE_INDEX_LEN);
-		System.arraycopy(byteRead, 0, buffer, MessageConstants.PIECE_INDEX_LEN, noBytesRead);
-
-		DataMessage sendMessage = new DataMessage(DATA_MSG_PIECE, buffer);
-		byte[] b =  DataMessage.encodeMessage(sendMessage);
-		SendData(socket, b);
-		
-		//release memory
-		buffer = null;
-		byteRead = null;
-		b = null;
-		bytePieceIndex = null;
-		sendMessage = null;
-		
-		try{
-			raf.close();
-		}
-		catch(Exception e){}
-	}
-	
-	private void sendNotInterested(Socket socket, String remotePeerID) 
-	{
-		peerProcess.showLog(peerProcess.peerID + " sending a NOT INTERESTED message to Peer " + remotePeerID);
-		DataMessage d =  new DataMessage(DATA_MSG_NOTINTERESTED);
-		byte[] msgByte = DataMessage.encodeMessage(d);
-		SendData(socket,msgByte);
-	}
-
-	private void sendInterested(Socket socket, String remotePeerID) {
-		peerProcess.showLog(peerProcess.peerID + " sending an INTERESTED message to Peer " + remotePeerID);
-		DataMessage d =  new DataMessage(DATA_MSG_INTERESTED);
-		byte[] msgByte = DataMessage.encodeMessage(d);
-		SendData(socket,msgByte);
-		
-	}
-
-	/*
-	private void updateRemoteBitField(DataMessage d, String rPeerId) {
-		//  Compare the bitfield and send TRUE if there is any extra data
-		
-		BitField b = BitField.decode(d.getPayload());
-		peerProcess.remotePeerInfoHash.get(rPeerId).bitField = b;
-		
-	}*/
-	
-	
-	
-	private boolean isInterested(DataMessage d, String rPeerId) {
-		//  Compare the bitfield and send TRUE if there is any extra data
-		
-		BitField b = BitField.decode(d.getPayload());
-		peerProcess.remotePeerInfoHash.get(rPeerId).bitField = b;
-		
-		//peerProcess.showLog(peerProcess.peerID + " Bitfield of Peer " + rPeerId);
-		if(peerProcess.ownBitField.compare(b))
-			return true;
-		return false;
-	}
-
-	private void sendUnChoke(Socket socket, String remotePeerID) {
-
-		peerProcess.showLog(peerProcess.peerID + " sending UNCHOKE message to Peer " + remotePeerID);
-		DataMessage d = new DataMessage(DATA_MSG_UNCHOKE);
-		byte[] msgByte = DataMessage.encodeMessage(d);
-		SendData(socket,msgByte);
-	}
-
-	private void sendChoke(Socket socket, String remotePeerID) {
-		peerProcess.showLog(peerProcess.peerID + " sending CHOKE message to Peer " + remotePeerID);
-		DataMessage d = new DataMessage(DATA_MSG_CHOKE);
-		byte[] msgByte = DataMessage.encodeMessage(d);
-		SendData(socket,msgByte);
-	}
-
-	private void sendBitField(Socket socket, String remotePeerID) {
-	
-		peerProcess.showLog(peerProcess.peerID + " sending BITFIELD message to Peer " + remotePeerID);
-		byte[] encodedBitField = peerProcess.ownBitField.encode();
-
-		DataMessage d = new DataMessage(DATA_MSG_BITFIELD, encodedBitField);
-		SendData(socket,DataMessage.encodeMessage(d));
-		
-		encodedBitField = null;
-	}
-	
-	
-	private void sendHave(Socket socket, String remotePeerID) {
-		
-		peerProcess.showLog(peerProcess.peerID + " sending HAVE message to Peer " + remotePeerID);
-		byte[] encodedBitField = peerProcess.ownBitField.encode();
-		DataMessage d = new DataMessage(DATA_MSG_HAVE, encodedBitField);
-		SendData(socket,DataMessage.encodeMessage(d));
-		
-		encodedBitField = null;
-	}
-	
-	private int SendData(Socket socket, byte[] encodedBitField) {
-		try {
-		OutputStream out = socket.getOutputStream();
-		out.write(encodedBitField);
 		} catch (IOException e) {
-			
+			// TODO Auto-generated catch block
 			e.printStackTrace();
-			return 0;
 		}
-		return 1;
+        
+        byte[] bitfieldMessage = message.toByteArray();
+        sendMessage(connection.getSocket(), bitfieldMessage);
+        log.writeLog("send BITFIELD " + bitfield.getBitField() + " to " + peer.getPeerId());
+    }
+	
+	public static void sendInterested(Connection connection, PeerInfo peer, Logger log) {
+        byte[] interestedMessage = buildMessage(DataMessage.MessageID.INTERESTED_ID);
+        sendMessage(connection.getSocket(), interestedMessage);
+        connection.getDownloadState().setInterested(true);
+        log.writeLog("send INTERESTED to " + peer.getPeerId());
+    }
+	
+	public static void sendNotInterested(Connection connection, PeerInfo peer, Logger log) {
+        byte[] notInterestedMessage = buildMessage(DataMessage.MessageID.NOT_INTERESTED_ID);
+        sendMessage(connection.getSocket(), notInterestedMessage);
+        connection.getDownloadState().setInterested(false);
+        log.writeLog("send NOT_INTERESTED to " + peer.getPeerId());
+    }
+	
+	public static void sendChoke(Connection connection, PeerInfo peer, Logger log) {
+        byte[] chokeMessage = buildMessage(DataMessage.MessageID.CHOKE_ID);
+        sendMessage(connection.getSocket(), chokeMessage);
+        connection.getUploadState().setChoked(true);
+        log.writeLog("send CHOKE to " + peer.getPeerId());
+    }
+	
+	public static void sendUnChoke(Connection connection, PeerInfo peer, Logger log) {
+        byte[] UnchokeMessage = buildMessage(DataMessage.MessageID.UNCHOKE_ID);
+        sendMessage(connection.getSocket(), UnchokeMessage);
+        connection.getUploadState().setChoked(false);
+        log.writeLog("send UNCHOKE to " + peer.getPeerId());
+    }
+	
+	public static byte[] buildMessage(DataMessage.MessageID messageID) {
+        return intToByte(messageID.ordinal());
+    }
+	
+	public static void sendHave(Connection connection, PeerInfo peer, Logger log, int pieceIndex) {
+        ByteArrayOutputStream message = new ByteArrayOutputStream();
+        try {
+            message.write(intToByte(DataMessage.MessageID.HAVE_ID.ordinal()));
+            message.write(intToByte(pieceIndex));
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        byte[] haveMessage = message.toByteArray();
+        sendMessage(connection.getSocket(), haveMessage);
+        log.writeLog(String.format("send HAVE for pieceIndex:%d to " + peer.getPeerId(), pieceIndex));
+    }
+	
+	public static void sendRequest(Connection connection, PeerInfo peer, Logger log, int pieceIndex, int pieceLength) {
+        if (!connection.canDownloadFrom()) {
+            log.writeLog("ERROR: cannot download from " + peer.getPeerId());
+            return;
+        }
+        
+        ByteArrayOutputStream message = new ByteArrayOutputStream();
+        try {
+            message.write(intToByte(DataMessage.MessageID.REQUEST_ID.ordinal()));
+            message.write(intToByte(pieceIndex));
+            message.write(intToByte(0));
+            message.write(intToByte(pieceLength));
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        byte[] requestMessage = message.toByteArray();
+        
+        sendMessage(connection.getSocket(), requestMessage);
+        log.writeLog(String.format("send REQUEST for pieceIndex:%d, pieceLength:%d to " + peer.getPeerId(), pieceIndex, pieceLength));
+    }
+	
+	public static void sendPiece(Connection connection, PeerInfo peer, Logger log, int pieceIndex, FileInfo datafile) {
+        ByteArrayOutputStream message = new ByteArrayOutputStream();
+        try {
+            message.write(intToByte(DataMessage.MessageID.PIECE_ID.ordinal()));
+            message.write(intToByte(pieceIndex));
+            message.write(intToByte(0));
+            message.write(intToByte(datafile.readPiece(pieceIndex).length));
+            message.write(datafile.readPiece(pieceIndex));
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        byte[] pieceMessage = message.toByteArray();
+        
+        sendMessage(connection.getSocket(), pieceMessage);
+        log.writeLog(String.format("send PIECE for pieceIndex:%d to " + peer.getPeerId(), pieceIndex));
+    }
+	
+	
+	private static void sendMessage(Socket peerSocket, byte[] message) {
+        try {
+            peerSocket.getOutputStream().write(message);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+	
+	public static DataMessage parseMessage(InputStream inputStream) {
+		DataMessage message = null;
+        int messageIdInt = readIntFromStream(inputStream);
+        DataMessage.MessageID messageId = DataMessage.MessageID.values()[messageIdInt];
+        try {
+            switch (messageId) {
+                case CHOKE_ID:
+                    message = new DataMessage(messageId);
+                    break;
+                case UNCHOKE_ID:
+                    message = new DataMessage(messageId);
+                    break;
+                case INTERESTED_ID:
+                    message = new DataMessage(messageId);
+                    break;
+                case NOT_INTERESTED_ID:
+                    message = new DataMessage(messageId);
+                    break;
+                case HAVE_ID:
+                    message = parseHave(inputStream);
+                    break;
+                case REQUEST_ID:
+                    message = parseRequest(inputStream);
+                    break;
+                case PIECE_ID:
+                    message = parsePiece(inputStream);
+                    break;
+                case BITFIELD_ID:
+                    message = parseBitfield(inputStream);
+                    break;
+                case HANDSHAKE_ID:
+                    message = parseHandshake(inputStream);
+                    break;
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return message;
+    }
+	public static DataMessage parseHandshake(InputStream input) throws IOException {
+		HandshakeMessage handshakeMessage = HandshakeMessage.decodeHandshake(input);
+		//String filename = handshakeMessage.getFileName();
+		//PeerInfo peer = handshakeMessage.getPeer();
+		return new DataMessage(DataMessage.MessageID.HANDSHAKE_ID, handshakeMessage);
 	}
 	
+	public static DataMessage parseBitfield(InputStream input) throws IOException {
+        byte[] bitfieldLengthArray = new byte[INT_BYTE_LEN];
+        input.read(bitfieldLengthArray, 0, INT_BYTE_LEN);
+        int bitfieldLength = byteToInt(bitfieldLengthArray);
+
+        byte[] bitfieldArray = new byte[bitfieldLength];
+        input.read(bitfieldArray, 0, bitfieldLength);
+        BitField bitfield = new BitField(bitfieldLength, BitSet.valueOf(bitfieldArray));
+        return new DataMessage(DataMessage.MessageID.BITFIELD_ID, bitfield);
+    }
+	
+	public static DataMessage parseHave(InputStream inputStream) throws IOException {
+        int pieceIndex = readIntFromStream(inputStream);
+        return new DataMessage(DataMessage.MessageID.HAVE_ID, pieceIndex);
+    }
+	
+	public static DataMessage parseRequest(InputStream input) throws IOException {
+        byte[] pieceIndexArray = new byte[INT_BYTE_LEN];
+        byte[] beginArray = new byte[INT_BYTE_LEN];
+        byte[] lengthArray = new byte[INT_BYTE_LEN];
+
+        input.read(pieceIndexArray, 0, INT_BYTE_LEN);
+        input.read(beginArray, 0, INT_BYTE_LEN);
+        input.read(lengthArray, 0, INT_BYTE_LEN);
+
+        int pieceIndex = byteToInt(pieceIndexArray);
+        int begin = byteToInt(beginArray);
+        int length = byteToInt(lengthArray);
+        Request request = new Request(pieceIndex, begin, length);
+        return new DataMessage(DataMessage.MessageID.REQUEST_ID, request);
+    }
+	
+	public static DataMessage parsePiece(InputStream input) throws IOException {
+        byte[] pieceIndexArray = new byte[INT_BYTE_LEN];
+        byte[] beginArray = new byte[INT_BYTE_LEN];
+        byte[] blockLengthArray = new byte[INT_BYTE_LEN];
+
+        input.read(pieceIndexArray, 0, INT_BYTE_LEN);
+        input.read(beginArray, 0, INT_BYTE_LEN);
+        input.read(blockLengthArray, 0, INT_BYTE_LEN);
+
+        int pieceIndex = byteToInt(pieceIndexArray);
+        int begin = byteToInt(beginArray);
+        int blockLength = byteToInt(blockLengthArray);
+        byte[] block = new byte[blockLength];
+        int read = 0;
+        while (read < blockLength){
+            read += input.read(block, read, blockLength - read);
+        }
+        Piece piece = new Piece(pieceIndex, begin, block);
+        return new DataMessage(DataMessage.MessageID.PIECE_ID, piece);
+    }
+	
+	
+	public static int readIntFromStream(InputStream inputStream) {
+        byte[] i = new byte[INT_BYTE_LEN];
+        try {
+            int j = inputStream.read(i);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return byteToInt(i);
+    }
+	
+	public static byte[] intToByte(int i) {
+        ByteBuffer b = ByteBuffer.allocate(INT_BYTE_LEN);
+        b.order(ByteOrder.BIG_ENDIAN);
+        b.putInt(i);
+        return b.array();
+    }
+	
+	public static int byteToInt(byte[] bytes) {
+        return ByteBuffer.wrap(bytes).order(ByteOrder.BIG_ENDIAN).getInt();
+    }
 
 }
