@@ -7,7 +7,7 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.stream.Collectors;
 
 public class ChokeTask implements Runnable {
-	private final int UNCHOKE_SLOTS = 4;
+	private final int UNCHOKE_SLOTS = 1;
 	private int i;
 	private ConcurrentMap<PeerInfo, Connection> connections;
 	private FileInfo datafile;
@@ -34,7 +34,7 @@ public class ChokeTask implements Runnable {
 	    // Take 4 peers with top rates
 	    Map<PeerInfo, Float> sortedRates = rates.entrySet().stream()
 	            .sorted(Map.Entry.comparingByValue(Comparator.reverseOrder()))
-	            .limit(4)
+	            .limit(UNCHOKE_SLOTS)
 	            .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
 	
 	    ConcurrentHashMap<PeerInfo, Float> oldUnchokedPeers = unchokedPeers;

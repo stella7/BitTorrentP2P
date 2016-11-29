@@ -50,7 +50,8 @@ public class ListeningThread implements Runnable, MessageConstants{
 						//sendingThread.start();
 						//MessageSender.sendBitfield(connections.get(peer), peer, logger, datafile.getBitfield());
 						//MessageProcessor.sendHandshake(connectionMap.get(remotePeer), remotePeer, log, datafile);
-						MessageSender.sendBitfield(connectionMap.get(remotePeer), remotePeer, log, datafile.getBitField());
+						//System.out.println("my bitfield is " + datafile.getBitField().getBitField());
+						MessageProcessor.sendBitfield(connectionMap.get(remotePeer), remotePeer, log, datafile.getBitField());
 					}
 					else
 					{

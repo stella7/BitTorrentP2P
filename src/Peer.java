@@ -28,7 +28,7 @@ import org.apache.zookeeper.WatchedEvent;
 import org.apache.zookeeper.Watcher.Event;
 
 public class Peer implements MessageConstants{
-    private static final int NUM_THREADS = 64;
+    private static final int NUM_THREADS = 16;
     private static final int BACKLOG = 10;
     private static final String CMD_USAGE = "NORMAL: java Client name port metafile directory\n" +
             "SHARING: java Client name port file trackerIP trackerPort";
@@ -108,32 +108,37 @@ public class Peer implements MessageConstants{
             System.exit(0);
     	}
     	
-    	System.out.println(isSeeder);
+    	//System.out.println(isSeeder);
 		Peer peer = new Peer();
-		peer.start();
+		List<String> children = peer.start();
 		
-		System.out.println(trackerHost + trackerPort);
+		//System.out.println(trackerHost + trackerPort);
 		
 		ConcurrentHashMap<PeerInfo, Float> unchokedPeers = new ConcurrentHashMap<>();
 		
 		newFile = new FileInfo(isSeeder, fileName, path, fileLen, pieceLen);
 		myBitField = newFile.getBitField();
-		System.out.println(myBitField.getBitField());
+		//System.out.println(myBitField.getBitField());
 		bitMap.put(fileName, myBitField);
-		peerTracker = new PeerTracker(trackerHost,trackerPort,myPeer, newFile);
+		
+		peer.initialize(children);
+		//peerTracker = new PeerTracker(trackerHost,trackerPort,myPeer, newFile);
 		//find seeders for the filename and connect to those peers, send HANDSHAKE message
-		peer.firstRequest(peerTracker, connectionMap);
+		//peer.firstRequest(peerTracker, connectionMap);
 		//start listening port to accept connection from newly joined peers
 		
 		//set watcher on zknode, if child node changed, peer will send request to tracker
 		new Thread(peer.new peerNodeChanged()).start();
-		
+
         executor.scheduleAtFixedRate(new ChokeTask(connectionMap, newFile, unchokedPeers, log), 0, UNCHOKE_INTERVAL, TimeUnit.SECONDS);
+
         new Thread(new ListeningThread(myPeer, BACKLOG, connectionMap, log, newFile)).start();
+        //System.out.println("Start respondTask");
+
         new Thread(new RespondTask(connectionMap, unchokedPeers, newFile, executor, log)).start();
     }
     
-	void start() throws Exception {
+	public List<String> start() throws Exception {
 		curClient =
 			    CuratorFrameworkFactory.builder()
 			    .connectString(ZK_CONNECT_STR)
@@ -163,6 +168,7 @@ public class Peer implements MessageConstants{
 			 .forPath("/" + zkNode + "/file/" + fileName, metaFile.createMetaFile());
 		}else{
 			byte[] data = curClient.getData().forPath("/" + zkNode + "/file/" + fileName);
+			
 			String strData = new String(data);
 		    String[] primary = strData.split(";");
 		    String[] info = primary[0].split(",");
@@ -173,12 +179,46 @@ public class Peer implements MessageConstants{
 		    trackerPort = Integer.parseInt(announce[1]);
 		    metaFile = new MetaFile(fileName, pieceLen, fileLen, trackerHost, trackerPort);
 		}
+		
+		List<String> children = 
+    			curClient.getChildren().forPath("/" + zkNode + "/file/" + fileName);
+		return children;
+	}
+	
+	public void initialize(List<String> children) throws Exception{
+		
+		curClient.create()
+		 .creatingParentsIfNeeded()
+		 .withMode(CreateMode.EPHEMERAL)
+		 .forPath("/" + zkNode + "/file/" + fileName +"/"+ myPeer.getPeerId(), String.format("%s:%s", myPeer.getHost(), myPeer.getPort()).getBytes());
+		if(children.isEmpty()) return;	
+		
+		for(String child : children){
+			//System.out.println(child);
+			byte[] data = curClient.getData().forPath("/" + zkNode + "/peer/" + child);
+			String strData = new String(data);
+		    String[] primary = strData.split(":");
+		    String peerHost = primary[0];
+		    int peerPort = Integer.parseInt(primary[1]);
+		    PeerInfo remotePeer = new PeerInfo(child, peerHost, peerPort);
+		    connectToRemotePeer(remotePeer, connectionMap);
+		}
+		//System.out.println("finish init");
+		
 	}
 	
 	private class peerNodeChanged implements Runnable{
 		public void run() {
 			try {
-				curClient.getChildren().usingWatcher(new peerWatcher()).forPath("/" + zkNode + "/peer");
+				List<String> peers = curClient.getChildren().usingWatcher(new peerWatcher()).forPath("/" + zkNode + "/file/" + fileName);
+				for (PeerInfo peer : connectionMap.keySet()) {
+	                if (!peers.contains(peer.getPeerId())) {
+	                    Connection connection = connectionMap.get(peer);
+	                    connectionMap.remove(peer);
+	                    log.writeLog("removing peer_" + peer.getPeerId() + " from file " + fileName + " list");
+	                    connection.getSocket().close();
+	                }
+	            }
 			} catch (Exception e) {
 				// TODO Auto-generated catch block
 				log.writeLog("exits");
@@ -190,9 +230,12 @@ public class Peer implements MessageConstants{
 	private class peerWatcher implements CuratorWatcher {
     	public void process(WatchedEvent event) {
     		if(event.getType() == Event.EventType.NodeChildrenChanged) {
+    			
+    			//log.writeLog("send EMPTY request to tracker for updating peer list");
+    			log.writeLog("get update peer list");
+    			//try {
     			new Thread(new peerNodeChanged()).start();
-    			log.writeLog("send EMPTY request to tracker for updating peer list");
-    			try {
+    				/*
 					TrackerResponse resp = peerTracker.getRequest(TrackerRequest.RequestEvent.EMPTY);
 					List<PeerInfo> peers = resp.getPeers();
 					for (PeerInfo peer : connectionMap.keySet()) {
@@ -203,10 +246,11 @@ public class Peer implements MessageConstants{
 		                    connection.getSocket().close();
 		                }
 		            }
-				} catch (IOException e) {
+					*/
+				//} catch (IOException e) {
 					// TODO Auto-generated catch block
-					e.printStackTrace();
-				}
+				//	e.printStackTrace();
+				//}
     		}
     	}
 	}
@@ -243,8 +287,9 @@ public class Peer implements MessageConstants{
 					connections.put(remotePeer, connection);
 					//Thread sendingThread = new Thread(new RespondTask(connections, connection, remotePeer, log));
 					//sendingThread.start();
-					MessageSender.sendHandshake(connection, remotePeer, log, newFile);
-					//MessageSender.sendBitfield(connection, remotePeer, log, myBitField);
+					MessageProcessor.sendHandshake(connection, remotePeer, log, newFile);
+					System.out.println("Send bitfield");
+					MessageProcessor.sendBitfield(connection, remotePeer, log, myBitField);
 					//MessageProcessor.sendInterested(connection, remotePeer, log);
 					
 				} catch (UnknownHostException e) {
@@ -257,6 +302,30 @@ public class Peer implements MessageConstants{
                 
             }
         }	
+    }
+    
+    public void connectToRemotePeer(PeerInfo remotePeer, ConcurrentMap<PeerInfo, Connection> connections){
+    	log.writeLog("Initializing connection to peer: " + remotePeer.getPeerId());
+        Socket socket;
+		try {
+			socket = new Socket(remotePeer.getHost(), remotePeer.getPort());
+			Connection connection = Connection.init(myPeer, socket);
+			connections.put(remotePeer, connection);
+			//Thread sendingThread = new Thread(new RespondTask(connections, connection, remotePeer, log));
+			//sendingThread.start();
+			System.out.println(connection.getSocket());
+			MessageProcessor.sendHandshake(connection, remotePeer, log, newFile);
+			//System.out.println("Send bitfield");
+			//MessageSender.sendBitfield(connection, remotePeer, log, myBitField);
+			//MessageProcessor.sendInterested(connection, remotePeer, log);
+			
+		} catch (UnknownHostException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
     }
  /*   
     public class ResponderTask implements Runnable{

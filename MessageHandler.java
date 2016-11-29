@@ -6,67 +6,91 @@ import java.util.concurrent.ConcurrentMap;
 public class MessageHandler implements Runnable{
 	private ConcurrentHashMap<PeerInfo, Float> unchokedPeers;
     private Connection connection;
-    private DataMessage message;
+    //private DataMessage message;
     private FileInfo datafile;
-    private Logger logger;
+  
     private PeerInfo peer;
+    private Downloader downloader;
+    private Uploader uploader;
     private ConcurrentMap<PeerInfo, Connection> connections; // only used for case PIECE_ID
 
     public MessageHandler(Connection connection,
                        PeerInfo peer,
                        ConcurrentMap<PeerInfo, Connection> connections,
-                       ConcurrentHashMap<PeerInfo, Float> unchokedPeers,
-                       DataMessage message,
-                       FileInfo datafile,
-                       Logger logger) {
+                       Downloader downloader,
+                       Uploader uploader,
+                       //DataMessage message,
+                       FileInfo datafile) {
 
         this.peer = peer;
         this.connection = connection;
         this.connections = connections;
-        this.message = message;
-        this.datafile = datafile;
-        this.logger = logger;
-        this.unchokedPeers = unchokedPeers;
-        
+        this.downloader = downloader;
+        this.uploader = uploader;
+        //this.message = message;
+        this.datafile = datafile;        
     }
+    
+    public MessageHandler(){
+    	
+    }
+    
 
     @Override
     public void run() {
     	//System.out.println("MessageHandler:" + message.getMessageID());
-        switch (message.getMessageID()) {
-            case HANDSHAKE_ID:
-            	MessageProcessor.sendBitfield(connection, peer, logger, datafile.getBitField());
-                connection.getSocket().getInetAddress();
-                        connection.getSocket().getPort();
-                break;
-            case INTERESTED_ID:
-            	receiveInterested(connection, peer);
-                break;
-            case NOT_INTERESTED_ID:
-            	receiveUninterested(connection, peer);
-                break;
-            case HAVE_ID:
-                updatePeerBitfield(connection, message.getPieceIndex());
-                break;
-            case REQUEST_ID:
-            	receiveRequest(connection, peer, datafile, message.getRequest().getPieceIndex());
-                break;
-            case PIECE_ID:
-            	receivePiece(connection, peer, connections, datafile, message.getPiece());
-                break;
-            case BITFIELD_ID:
-            	receiveBitfield(connection, peer, message.getBitfield(), datafile);
-            	//System.out.println("finish bitfield");
-                break;
-            case CHOKE_ID:
-            	receiveChoke(connection, peer);
-                break;
-            case UNCHOKE_ID:
-            	receiveUnchoke(connection, peer, datafile);
-                break;
-        }
+    	DataMessage message;
+    	while(true){
+    		
+    		message  = connection.removeFromMsgQueue();
+			while(message == null)
+			{
+				Thread.currentThread();
+				try {
+					Thread.sleep(500);
+				} catch (InterruptedException e) {
+					
+					e.printStackTrace();
+				}
+				message  = Peer.removeFromMsgQueue();
+			}
+    			
+			switch (message.getMessageID()) {
+	            case HANDSHAKE_ID:
+	                MessageSender.sendBitfield(connection, peer, downloader.getLogger(), datafile.getBitField());
+	                connection.getSocket().getInetAddress();
+	                        connection.getSocket().getPort();
+	                break;
+	            case INTERESTED_ID:
+	            	uploader.receiveInterested(connection, peer);
+	                break;
+	            case NOT_INTERESTED_ID:
+	            	uploader.receiveUninterested(connection, peer);
+	                break;
+	            case HAVE_ID:
+	                updatePeerBitfield(connection, message.getPieceIndex());
+	                break;
+	            case REQUEST_ID:
+	            	uploader.receiveRequest(connection, peer, datafile, message.getRequest().getPieceIndex());
+	                break;
+	            case PIECE_ID:
+	            	downloader.receivePiece(connection, peer, connections, datafile, message.getPiece());
+	                break;
+	            case BITFIELD_ID:
+	            	downloader.receiveBitfield(connection, peer, message.getBitfield(), datafile);
+	            	//System.out.println("finish bitfield");
+	                break;
+	            case CHOKE_ID:
+	            	downloader.receiveChoke(connection, peer);
+	                break;
+	            case UNCHOKE_ID:
+	            	downloader.receiveUnchoke(connection, peer, datafile);
+	                break;
+    		}
+    	}
+        
     }
-    
+    /*
     public void receiveInterested(Connection connection, PeerInfo peer) {
     	
         logger.writeLog("receive INTERESTED from peer_" + peer.getPeerId());
@@ -77,7 +101,7 @@ public class MessageHandler implements Runnable{
             System.out.println("Uploaded unchoked set contains " + peer1);
         }
         if (unchokedPeers.containsKey(peer)) {
-            MessageProcessor.sendUnchoke(connection, peer, logger);
+            MessageSender.sendUnchoke(connection, peer, logger);
         }
         //        }
     }
@@ -96,7 +120,7 @@ public class MessageHandler implements Runnable{
             logger.writeLog("ERROR: cannot upload to " + peer);
             return;
         }
-        MessageProcessor.sendPiece(connection, peer, logger, pieceIndex, datafile);
+        MessageSender.sendPiece(connection, peer, logger, pieceIndex, datafile);
     }
     
     public void receiveChoke(Connection connection, PeerInfo peer) {
@@ -115,15 +139,14 @@ public class MessageHandler implements Runnable{
                              ConcurrentMap<PeerInfo, Connection> connections,
                              FileInfo datafile,
                              Piece piece) {
-    	System.out.println("conn Map size ::::: " + connections.size());
         logger.writeLog(String.format("receive PIECE for pieceIndex:%d from peer_" + peer.getPeerId(), piece.getPieceIndex()));
         datafile.getBitField().setPieceToCompleted(piece.getPieceIndex());                  // 1. update bitfield
         datafile.writePiece(piece.getBlock(), piece.getPieceIndex());                       // 2. write piece
         connection.incrementBytesDownloaded(piece.getBlock().length);                       // 3. update bytes downloaded
         for (Map.Entry<PeerInfo, Connection> peerConnection : connections.entrySet()) {         // 4. broadcast Have new piece to all peers
-            if (!peerConnection.getKey().equals(peer)) {
-            	MessageProcessor.sendHave(peerConnection.getValue(), peerConnection.getKey(), logger, piece.getPieceIndex());
-                //logger.writeLog("send HAVE to peer_" + peerConnection.getKey().getPeerId());
+            if (!peerConnection.getValue().equals(connection)) {
+            	MessageSender.sendHave(peerConnection.getValue(), peer, logger, piece.getPieceIndex());
+                logger.writeLog("send HAVE to peer_" + peerConnection.getKey().getPeerId());
             }
         }
         requestFirstAvailPiece(connection, peer, datafile);                                 // 5. request next piece
@@ -139,10 +162,10 @@ public class MessageHandler implements Runnable{
         connection.setBitfield(bitfield);               // set peer's bitfield
         
         if (!datafile.isCompleted()) {
-        	MessageProcessor.sendInterested(connection, peer, logger);
+        	MessageSender.sendInterested(connection, peer, logger);
         	//requestFirstAvailPiece(connection, peer, datafile);
         }else{
-        	MessageProcessor.sendNotInterested(connection, peer, logger);
+        	MessageSender.sendNotInterested(connection, peer, logger);
         }
         //System.out.println("finish");
     }
@@ -155,12 +178,12 @@ public class MessageHandler implements Runnable{
         }
         for (int i = 0; i < datafile.getNumPieces(); i++) {
             if (datafile.getBitField().missingPiece(i) && connection.getBitfield().hasPiece(i)) {
-            	MessageProcessor.sendRequest(connection, peer, logger, i, datafile.getPieceLength()); // request entire piece
+            	MessageSender.sendRequest(connection, peer, logger, i, datafile.getPieceLength()); // request entire piece
                 break;
             }
         }
     }
-
+*/
     private void updatePeerBitfield(Connection connection, int pieceIndex) {
         connection.getBitfield().setPieceToCompleted(pieceIndex);
     }

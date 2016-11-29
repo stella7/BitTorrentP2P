@@ -26,6 +26,7 @@ public class MessageSender implements MessageConstants{
 		}
         
         byte[] bitfieldMessage = message.toByteArray();
+        System.out.println(connection.getSocket());
         sendMessage(connection.getSocket(), bitfieldMessage);
         log.writeLog("send BITFIELD " + bitfield.getBitField() + " to peer_" + peer.getPeerId());
     }
