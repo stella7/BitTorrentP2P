@@ -25,6 +25,7 @@ public class Connection {
         this.isConnected = isConnected;
         this.downloadState = downloadState;
         this.uploadState = uploadState;
+        initTime = System.currentTimeMillis();
     }
     
     public static Connection init(PeerInfo peer, Socket socket){
@@ -94,6 +95,14 @@ public class Connection {
         bytesUploaded += newBytesUploaded;
     }
 
+    public long getByteDownloaded(){
+    	return bytesDownloaded;
+    }
+    
+    public long getByteUploaded(){
+    	return bytesUploaded;
+    }
+    
     // used for unchoke algorithm if this client is downloading file
     public float getDownloadRate(long currentTime) {
         return ((float) bytesDownloaded / (currentTime - initTime));

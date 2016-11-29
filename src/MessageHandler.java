@@ -96,6 +96,8 @@ public class MessageHandler implements Runnable{
             logger.writeLog("ERROR: cannot upload to " + peer);
             return;
         }
+        connection.incrementBytesUploaded(datafile.getPieceLength());
+        System.out.println("pieceLen: " + datafile.getPieceLength());
         MessageProcessor.sendPiece(connection, peer, logger, pieceIndex, datafile);
     }
     
@@ -115,13 +117,15 @@ public class MessageHandler implements Runnable{
                              ConcurrentMap<PeerInfo, Connection> connections,
                              FileInfo datafile,
                              Piece piece) {
-    	System.out.println("conn Map size ::::: " + connections.size());
         logger.writeLog(String.format("receive PIECE for pieceIndex:%d from peer_" + peer.getPeerId(), piece.getPieceIndex()));
         datafile.getBitField().setPieceToCompleted(piece.getPieceIndex());                  // 1. update bitfield
         datafile.writePiece(piece.getBlock(), piece.getPieceIndex());                       // 2. write piece
         connection.incrementBytesDownloaded(piece.getBlock().length);                       // 3. update bytes downloaded
+        //System.out.println("download bytes: " + connection.getByteDownloaded());
         for (Map.Entry<PeerInfo, Connection> peerConnection : connections.entrySet()) {         // 4. broadcast Have new piece to all peers
-            if (!peerConnection.getKey().equals(peer)) {
+            if (peerConnection.getKey().equals(peer)) continue;
+            if(!peerConnection.getValue().getBitfield().isCompleted() && 
+            		!peerConnection.getValue().getDownloadState().isChoked()){
             	MessageProcessor.sendHave(peerConnection.getValue(), peerConnection.getKey(), logger, piece.getPieceIndex());
                 //logger.writeLog("send HAVE to peer_" + peerConnection.getKey().getPeerId());
             }
@@ -138,8 +142,10 @@ public class MessageHandler implements Runnable{
         //		datafile.getNumPieces());
         connection.setBitfield(bitfield);               // set peer's bitfield
         
-        if (!datafile.isCompleted()) {
+        if (isInterested(bitfield, datafile)) {
         	MessageProcessor.sendInterested(connection, peer, logger);
+        	State state = connection.getDownloadState();
+        	state.setInterested(true);
         	//requestFirstAvailPiece(connection, peer, datafile);
         }else{
         	MessageProcessor.sendNotInterested(connection, peer, logger);
@@ -150,7 +156,7 @@ public class MessageHandler implements Runnable{
 
     private void requestFirstAvailPiece(Connection connection, PeerInfo peer, FileInfo datafile) {
         if (datafile.isCompleted()) {
-            logger.writeLog("datafile is complete! WOOOOOOOOOOOO!");
+            logger.writeLog("Datafile download is complete!!");
             return;
         }
         for (int i = 0; i < datafile.getNumPieces(); i++) {
@@ -160,6 +166,17 @@ public class MessageHandler implements Runnable{
             }
         }
     }
+    
+    private boolean isInterested(BitField bitfield, FileInfo datafile) {
+		//  Compare the bitfield and send TRUE if there is any extra data
+		BitField myBitfield = datafile.getBitField();
+		for(int i = 0; i < datafile.getNumPieces(); i++){
+			if(myBitfield.missingPiece(i) && bitfield.hasPiece(i)){
+				return true;
+			}
+		}
+		return false;
+	}
 
     private void updatePeerBitfield(Connection connection, int pieceIndex) {
         connection.getBitfield().setPieceToCompleted(pieceIndex);

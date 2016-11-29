@@ -7,7 +7,7 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.stream.Collectors;
 
 public class ChokeTask implements Runnable {
-	private final int UNCHOKE_SLOTS = 1;
+	private final int UNCHOKE_SLOTS = 2;
 	private int i;
 	private ConcurrentMap<PeerInfo, Connection> connections;
 	private FileInfo datafile;
@@ -57,12 +57,15 @@ public class ChokeTask implements Runnable {
 	        for (Map.Entry<PeerInfo, Connection> connection : connections.entrySet()) {
 	            if (connection.getValue().getUploadState().isInterested()) {
 	                rates.put(connection.getKey(), connection.getValue().getUploadRate(currentTime));
+	                System.out.println("upload Bytes: " + connection.getValue().getByteUploaded());
+	                System.out.println(connection.getKey().getPeerId() + " uload " + connection.getValue().getUploadRate(currentTime));
 	            }
 	        }
 	    } else {                            // use download rate to determine 4 unchoke slots
 	        for (Map.Entry<PeerInfo, Connection> connection : connections.entrySet()) {
-	            if (connection.getValue().getUploadState().isInterested()) {
+	            if (connection.getValue().getDownloadState().isInterested()) {
 	                rates.put(connection.getKey(), connection.getValue().getDownloadRate(currentTime));
+	                System.out.println(connection.getKey().getPeerId() + " dload " + connection.getValue().getDownloadRate(currentTime));
 	            }
 	        }
 	    }

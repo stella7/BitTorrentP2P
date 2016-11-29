@@ -32,7 +32,7 @@ public class Peer implements MessageConstants{
     private static final int BACKLOG = 10;
     private static final String CMD_USAGE = "NORMAL: java Client name port metafile directory\n" +
             "SHARING: java Client name port file trackerIP trackerPort";
-    private static final int UNCHOKE_INTERVAL = 5;
+    private static final int UNCHOKE_INTERVAL = 1;
     static PeerInfo myPeer;
     static Logger log;
     static final String ZK_CONNECT_STR = "snorkel.uwaterloo.ca:2181";
