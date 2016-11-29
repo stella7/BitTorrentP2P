@@ -9,4 +9,16 @@ public class Piece {
         this.begin = begin;
         this.block = block;
     }
+    
+    public int getPieceIndex() {
+        return pieceIndex;
+    }
+
+    public int getBegin() {
+        return begin;
+    }
+
+    public byte[] getBlock() {
+        return block;
+    }
 }

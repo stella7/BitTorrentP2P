@@ -25,9 +25,10 @@ import org.apache.log4j.*;
 public class Tracker implements Runnable{
 	static Logger log;
 	static final String ZK_CONNECT_STR = "snorkel.uwaterloo.ca:2181";
-	static String zkNode = System.getProperty("user.name");
+	static String zkNode = "s66he";
 	private static CuratorFramework curClient;
 	static ServerSocket trackserver;
+	String zkPath = "/" + zkNode;
 	
 	private static ConcurrentHashMap<String, List<String>> peerLists = new ConcurrentHashMap<>();
 	private static ConcurrentHashMap<String, List<PeerInfo>> fileLists = new ConcurrentHashMap<>();
@@ -132,6 +133,7 @@ public class Tracker implements Runnable{
 		 		return new TrackerResponse(peers.size(), peers);
 		 		
 		 	case COMPLETED:
+                log.writeLog("accept COMPLETED Request from peer: " + peerRequest.getPeerId() + " for file: " + fileName);
 		 		if(!peerLists.contains(peerRequest.getPeerId())){
                 	List<String> files = new ArrayList<>();
                 	files.add(fileName);
@@ -144,11 +146,14 @@ public class Tracker implements Runnable{
                 }
 		 		
 		 		if (!fileLists.containsKey(fileName)) {
-                    log.writeLog("accept COMPLETED Request from peer: " + peerRequest.getPeerId() + ". Submitting file: " + fileName);
                     peers = new ArrayList<>();
                     peers.add(peerRequest);
                     fileLists.put(fileName, peers);                                    
                     return new TrackerResponse(1, peers);
+                }else{
+                	peers = fileLists.get(fileName);
+                	peers.add(peerRequest);
+                	fileLists.put(fileName, peers);
                 }
 		 		showFiles();
 		 		return new TrackerResponse(fileLists.get(fileName).size(), fileLists.get(fileName));

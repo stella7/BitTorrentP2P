@@ -10,11 +10,18 @@ import java.util.*;
 public class TrackerResponse {
 	int seederNum;
 	List<PeerInfo> seedPeers;
-	
+	String zkPath;
 	public TrackerResponse(int sNum, List<PeerInfo> sPeers){
 		seederNum = sNum;
 		seedPeers = sPeers;
 	}
+	/*
+	public TrackerResponse(int sNum, List<PeerInfo> sPeers, String zkPath){
+		seederNum = sNum;
+		seedPeers = sPeers;
+		this.zkPath = zkPath;
+	}
+	*/
 	
 	public static TrackerResponse decodeResponse(InputStream in) throws IOException{
 		DataInputStream dis = new DataInputStream(in);
@@ -35,6 +42,12 @@ public class TrackerResponse {
         	int pPort = dis.readInt();
             peers.add(new PeerInfo(pId, pHost, pPort));
         }
+        /*
+        int pathLen = dis.readInt();
+    	byte[] pathRaw = new byte[pathLen];
+    	dis.read(pathRaw, 0, pathLen);
+    	String zkPath = new String(pathRaw);
+        */
         return new TrackerResponse(sNum, peers);
 	}
 	
@@ -50,7 +63,10 @@ public class TrackerResponse {
 			 dos.writeInt(peer.getHost().length());
 			 dos.write(peer.getHost().getBytes(StandardCharsets.US_ASCII));
 			 dos.writeInt(peer.getPort());
-		 }	
+		 }
+		 
+		// dos.writeInt(zkPath.length());
+		// dos.write(zkPath.getBytes(StandardCharsets.US_ASCII));
 	}
 	
 	public List<PeerInfo> getPeers(){

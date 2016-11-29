@@ -1,4 +1,6 @@
 import java.net.Socket;
+import java.util.LinkedList;
+import java.util.Queue;
 
 public class Connection {
 	private PeerInfo myPeer; 
@@ -14,7 +16,7 @@ public class Connection {
 	private float myDownloadRate;
     private long bytesDownloaded;
     private long bytesUploaded;
-
+    private volatile Queue<DataMessage> messageQ = new LinkedList<DataMessage>();
     private long initTime;
     
     public Connection(PeerInfo peer, Socket socket, boolean isConnected, State downloadState, State uploadState) {
@@ -30,6 +32,23 @@ public class Connection {
     	State upload = new State(true, false);
     	return new Connection(peer, socket, true, download, upload);
     }
+    
+    public synchronized void addToMsgQueue(DataMessage msg)
+	{
+		messageQ.add(msg);
+	}
+	
+	public synchronized DataMessage removeFromMsgQueue()
+	{
+		DataMessage msg = null;
+		
+		if(!messageQ.isEmpty())
+		{
+			msg = messageQ.remove();
+		}
+		
+		return msg;
+	}
     
     public boolean getIsConnected() {
         return isConnected;
@@ -56,7 +75,7 @@ public class Connection {
     }
 
     public boolean canUploadTo() {
-        return uploadState.isInterested() && uploadState.isChoked();
+        return uploadState.isInterested() && !uploadState.isChoked();
     }
     
     public BitField getBitfield() {
@@ -65,6 +84,24 @@ public class Connection {
 
     public void setBitfield(BitField bitfield) {
         this.bitfield = bitfield;
+    }
+    
+    public void incrementBytesDownloaded(int newBytesDownloaded) {
+        bytesDownloaded += newBytesDownloaded;
+    }
+
+    public void incrementBytesUploaded(int newBytesUploaded) {
+        bytesUploaded += newBytesUploaded;
+    }
+
+    // used for unchoke algorithm if this client is downloading file
+    public float getDownloadRate(long currentTime) {
+        return ((float) bytesDownloaded / (currentTime - initTime));
+    }
+
+    // used for unchoke algorithm if this client has COMPLETED downloading file
+    public float getUploadRate(long currentTime) {
+        return ((float) bytesUploaded / (currentTime - initTime));
     }
 
 }

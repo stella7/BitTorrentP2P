@@ -6,14 +6,14 @@ import java.net.Socket;
 import java.util.concurrent.ConcurrentMap;
 
 public class ListeningThread implements Runnable, MessageConstants{
-	private PeerInfo peer;
+	private PeerInfo myPeer;
 	private int backlog;
 	private Logger log;
 	private FileInfo datafile;
 	private ConcurrentMap<PeerInfo, Connection> connectionMap;
 	 
 	public ListeningThread(PeerInfo peer, int backlog, ConcurrentMap<PeerInfo, Connection> connections, Logger log, FileInfo datafile){
-		this.peer = peer;
+		this.myPeer = peer;
         this.backlog = backlog;
         this.connectionMap = connections;
         this.log = log;
@@ -23,13 +23,13 @@ public class ListeningThread implements Runnable, MessageConstants{
 	public void run() {
 
 	    try {
-	        ServerSocket socket = new ServerSocket(peer.getPort(), backlog);
+	        ServerSocket socket = new ServerSocket(myPeer.getPort(), backlog);
 	        while (true) {
 	            // Accept peer connections
 	            try {
 	                Socket peerSocket = socket.accept();
 	                log.writeLog("accepted new connection from " + peerSocket.getInetAddress() + " at port " + peerSocket.getPort());
-	                InputStream in = peerSocket.getInputStream();
+	                //InputStream in = peerSocket.getInputStream();
 	                //OutputStream out = peerSocket.getOutputStream();
 	                DataMessage message = MessageProcessor.parseMessage(peerSocket.getInputStream());
 	                if (message.getMessageID() != DataMessage.MessageID.HANDSHAKE_ID) {
@@ -42,12 +42,15 @@ public class ListeningThread implements Runnable, MessageConstants{
 						
 						PeerInfo remotePeer = handshakeMessage.getPeer();
 																
-						log.writeLog("received a HANDSHAKE message from Peer " + remotePeer.getPeerId());
-						log.writeLog("makes a connection to Peer " + remotePeer.getPeerId());
+						log.writeLog("received a HANDSHAKE message from peer_" + remotePeer.getPeerId());
+						log.writeLog("makes a connection to peer_" + remotePeer.getPeerId());
 						//populate peerID to socket mapping
-						connectionMap.put(remotePeer, Connection.init(remotePeer, peerSocket));
+						connectionMap.put(remotePeer, Connection.init(myPeer, peerSocket));
+						//Thread sendingThread = new Thread(new RespondTask(connectionMap.get(remotePeer), remotePeer, log));
+						//sendingThread.start();
 						//MessageSender.sendBitfield(connections.get(peer), peer, logger, datafile.getBitfield());
-						MessageProcessor.sendBitfield(connectionMap.get(remotePeer), remotePeer, log, datafile.getBitField());
+						//MessageProcessor.sendHandshake(connectionMap.get(remotePeer), remotePeer, log, datafile);
+						MessageSender.sendBitfield(connectionMap.get(remotePeer), remotePeer, log, datafile.getBitField());
 					}
 					else
 					{

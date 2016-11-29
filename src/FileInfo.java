@@ -84,5 +84,9 @@ public class FileInfo {
     public BitField getBitField(){
     	return bitfield;
     }
+    
+    public boolean isCompleted() {
+        return bitfield.isCompleted();
+    }
 
 }

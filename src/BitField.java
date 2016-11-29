@@ -21,7 +21,7 @@ public class BitField {
 	}
 	
 	public boolean isCompleted(){
-		return bitfield.nextClearBit(0) > numPieces;		
+		return bitfield.nextClearBit(0) >= numPieces;		
 	}
 	
 	public BitSet getBitField(){
@@ -31,4 +31,16 @@ public class BitField {
 	public int getNumPieces(){
 		return numPieces;
 	}
+	
+	public synchronized void setPieceToCompleted(int pieceIndex) {
+        bitfield.set(pieceIndex);
+    }
+	
+	public boolean missingPiece(int pieceIndex) {
+        return bitfield.get(pieceIndex) == false;
+    }
+	
+	public boolean hasPiece(int pieceIndex) {
+        return bitfield.get(pieceIndex) == true;
+    }
 }

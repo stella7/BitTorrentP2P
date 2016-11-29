@@ -8,9 +8,15 @@ import java.net.UnknownHostException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Iterator;
+import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
+import java.util.Queue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.CuratorFrameworkFactory;
@@ -22,7 +28,7 @@ import org.apache.zookeeper.WatchedEvent;
 import org.apache.zookeeper.Watcher.Event;
 
 public class Peer implements MessageConstants{
-    private static final int NUM_THREADS = 8;
+    private static final int NUM_THREADS = 64;
     private static final int BACKLOG = 10;
     private static final String CMD_USAGE = "NORMAL: java Client name port metafile directory\n" +
             "SHARING: java Client name port file trackerIP trackerPort";
@@ -30,7 +36,7 @@ public class Peer implements MessageConstants{
     static PeerInfo myPeer;
     static Logger log;
     static final String ZK_CONNECT_STR = "snorkel.uwaterloo.ca:2181";
-	static String zkNode = System.getProperty("user.name");
+	static String zkNode = "s66he";
 	private static CuratorFramework curClient;
 	static ConcurrentMap<PeerInfo, Connection> connectionMap = new ConcurrentHashMap<>();
 	static boolean isSeeder = false;
@@ -44,7 +50,27 @@ public class Peer implements MessageConstants{
     static int pieceLen;
     static FileInfo newFile;
 	public static ConcurrentHashMap<String,BitField> bitMap = new ConcurrentHashMap<>();
+	public static volatile Queue<DataMessage> messageQ = new LinkedList<DataMessage>();
 	static final int PIECE_LEN = 256 * 1024;
+	static ScheduledExecutorService executor = Executors.newScheduledThreadPool(NUM_THREADS);
+	
+	public static synchronized void addToMsgQueue(DataMessage msg)
+	{
+		messageQ.add(msg);
+	}
+	
+	public static synchronized DataMessage removeFromMsgQueue()
+	{
+		DataMessage msg = null;
+		
+		if(!messageQ.isEmpty())
+		{
+			msg = messageQ.remove();
+		}
+		
+		return msg;
+	}
+	
     public static void main(String[] args) throws Exception {
 
     	BasicConfigurator.configure();
@@ -61,6 +87,7 @@ public class Peer implements MessageConstants{
     	if (args.length == 4) { // start as leecher
     		fileName = args[2];
     		path = args[3];
+    		myPeer.setState(0);
     	}else if(args.length == 5){ // start as seeder
     		trackerHost = args[2];
     		trackerPort = Integer.parseInt(args[3]);
@@ -74,6 +101,7 @@ public class Peer implements MessageConstants{
     		path = filePath.getParent().toString();
     		pieceLen = PIECE_LEN;
     		isSeeder = true;
+    		myPeer.setState(1);
     	}else{
     		System.out.println(args.length);
             System.out.println(CMD_USAGE);
@@ -86,6 +114,7 @@ public class Peer implements MessageConstants{
 		
 		System.out.println(trackerHost + trackerPort);
 		
+		ConcurrentHashMap<PeerInfo, Float> unchokedPeers = new ConcurrentHashMap<>();
 		
 		newFile = new FileInfo(isSeeder, fileName, path, fileLen, pieceLen);
 		myBitField = newFile.getBitField();
@@ -93,11 +122,15 @@ public class Peer implements MessageConstants{
 		bitMap.put(fileName, myBitField);
 		peerTracker = new PeerTracker(trackerHost,trackerPort,myPeer, newFile);
 		//find seeders for the filename and connect to those peers, send HANDSHAKE message
-		peer.firstRequest(peerTracker);
+		peer.firstRequest(peerTracker, connectionMap);
 		//start listening port to accept connection from newly joined peers
-		new Thread(new ListeningThread(myPeer, BACKLOG, connectionMap, log, newFile)).start();
+		
 		//set watcher on zknode, if child node changed, peer will send request to tracker
 		new Thread(peer.new peerNodeChanged()).start();
+		
+        executor.scheduleAtFixedRate(new ChokeTask(connectionMap, newFile, unchokedPeers, log), 0, UNCHOKE_INTERVAL, TimeUnit.SECONDS);
+        new Thread(new ListeningThread(myPeer, BACKLOG, connectionMap, log, newFile)).start();
+        new Thread(new RespondTask(connectionMap, unchokedPeers, newFile, executor, log)).start();
     }
     
 	void start() throws Exception {
@@ -145,10 +178,11 @@ public class Peer implements MessageConstants{
 	private class peerNodeChanged implements Runnable{
 		public void run() {
 			try {
-				curClient.checkExists().usingWatcher(new peerWatcher()).forPath("/" + zkNode);
+				curClient.getChildren().usingWatcher(new peerWatcher()).forPath("/" + zkNode + "/peer");
 			} catch (Exception e) {
 				// TODO Auto-generated catch block
-				e.printStackTrace();
+				log.writeLog("exits");
+				System.exit(0);
 			}
 		}			
     }
@@ -165,7 +199,7 @@ public class Peer implements MessageConstants{
 		                if (!peers.contains(peer)) {
 		                    Connection connection = connectionMap.get(peer);
 		                    connectionMap.remove(peer);
-		                    log.writeLog("removing peer " + peer + " for file " + fileName);
+		                    log.writeLog("removing peer_" + peer.getPeerId() + " from file " + fileName + " list");
 		                    connection.getSocket().close();
 		                }
 		            }
@@ -177,7 +211,7 @@ public class Peer implements MessageConstants{
     	}
 	}
     
-    public void firstRequest(PeerTracker peerTracker) throws Exception{
+    public void firstRequest(PeerTracker peerTracker, ConcurrentMap<PeerInfo, Connection> connections) throws Exception{
     	TrackerResponse firstResp;
 		
 		if(isSeeder){
@@ -194,22 +228,24 @@ public class Peer implements MessageConstants{
 		if(peers.isEmpty()){
 			log.writeLog("does NOT find  seeder for file: " + peerTracker.getFile().getFilename());
 		}else{
-			connectToPeers(peers);
+			connectToPeers(peers, connections);
 		}
     }
     
-    public void connectToPeers(List<PeerInfo> peersToConnect){
+    public void connectToPeers(List<PeerInfo> peersToConnect, ConcurrentMap<PeerInfo, Connection> connections){
     	for (PeerInfo remotePeer : peersToConnect) {
             if (!myPeer.equals(remotePeer)) {
-                log.writeLog("Initializing connection to peer: " + remotePeer);
+                log.writeLog("Initializing connection to peer: " + remotePeer.getPeerId());
                 Socket socket;
 				try {
 					socket = new Socket(remotePeer.getHost(), remotePeer.getPort());
 					Connection connection = Connection.init(myPeer, socket);
-					connectionMap.put(remotePeer, connection);
-					MessageProcessor.sendHandshake(connection, remotePeer, log, newFile);
-					MessageProcessor.sendBitfield(connection, remotePeer, log, myBitField);
-					//To be continued...
+					connections.put(remotePeer, connection);
+					//Thread sendingThread = new Thread(new RespondTask(connections, connection, remotePeer, log));
+					//sendingThread.start();
+					MessageSender.sendHandshake(connection, remotePeer, log, newFile);
+					//MessageSender.sendBitfield(connection, remotePeer, log, myBitField);
+					//MessageProcessor.sendInterested(connection, remotePeer, log);
 					
 				} catch (UnknownHostException e) {
 					// TODO Auto-generated catch block
@@ -222,11 +258,47 @@ public class Peer implements MessageConstants{
             }
         }	
     }
-    
+ /*   
+    public class ResponderTask implements Runnable{
+    	
+    	public void run() {
+    		
+            while (true) {
+            	//System.out.println("Responder running");
+                for (Map.Entry<PeerInfo, Connection> connection : connectionMap.entrySet()) {
+                    try {
+                        InputStream input = connection.getValue().getSocket().getInputStream();
+                        if (input.available() == 0) {
+                        	//System.out.println("input empty");
+                            continue;
+                        }
+                        System.out.println(connection.getKey().getPeerId());
+                        DataMessage message = MessageProcessor.parseMessage(input);
+                        System.out.println(message.getMessageID());
+                        executor.submit(new MessageHandler(connection.getValue(),
+                                connection.getKey(),
+                                connectionMap,
+                                message,
+                                newFile,
+                                log));
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                }
+            }
+        }
+    }
+  */  
     public void showPeers(TrackerResponse resp){
     	List<PeerInfo> peers = resp.getPeers();
 		for(PeerInfo peer : peers){
 			System.out.println(peer.getPeerId());
 		}
+    }
+    
+    public void showList(){
+    	for (Map.Entry<PeerInfo, Connection> connection : connectionMap.entrySet()) {
+    		System.out.println(connection.getKey().getPeerId());
+    	}
     }
 }

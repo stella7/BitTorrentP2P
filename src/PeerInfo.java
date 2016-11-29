@@ -13,6 +13,7 @@ public class PeerInfo {
 	public String peerHost;
 	public int peerPort;
 	public static final int intByteLength = 4;
+	public int state = -1;
 	public PeerInfo(String pId, String pHost, int pPort){
 		peerId = pId;
 		peerHost = pHost;
@@ -36,6 +37,14 @@ public class PeerInfo {
 			return true;
 		else
 			return false;
+	}
+	
+	public void setState(int state){
+		this.state = state;
+	}
+	
+	public int getState(){
+		return state;
 	}
 	
 	public byte[] encodePeer(){
