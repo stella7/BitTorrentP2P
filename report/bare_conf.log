@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.14159265-2.6-1.40.16 (TeX Live 2015) (preloaded format=pdflatex 2015.11.15)  2 DEC 2016 20:26
+This is pdfTeX, Version 3.14159265-2.6-1.40.16 (TeX Live 2015) (preloaded format=pdflatex 2015.11.15)  2 DEC 2016 20:31
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -154,9 +154,9 @@ Missing character: There is no ™ in font ptmr7t!
 
 ]
 LaTeX Font Info:    External font `cmex10' loaded for size
-(Font)              <8> on input line 573.
+(Font)              <8> on input line 574.
 LaTeX Font Info:    External font `cmex10' loaded for size
-(Font)              <6> on input line 573.
+(Font)              <6> on input line 574.
 
 
 ** Conference Paper **
@@ -185,7 +185,7 @@ ase/8r.enc}</usr/local/texlive/2015basic/texmf-dist/fonts/type1/urw/times/utmb8
 a.pfb></usr/local/texlive/2015basic/texmf-dist/fonts/type1/urw/times/utmbi8a.pf
 b></usr/local/texlive/2015basic/texmf-dist/fonts/type1/urw/times/utmr8a.pfb></u
 sr/local/texlive/2015basic/texmf-dist/fonts/type1/urw/times/utmri8a.pfb>
-Output written on bare_conf.pdf (2 pages, 52128 bytes).
+Output written on bare_conf.pdf (2 pages, 52108 bytes).
 PDF statistics:
  28 PDF objects out of 1000 (max. 8388607)
  19 compressed objects within 1 object stream
