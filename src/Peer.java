@@ -313,7 +313,7 @@ public class Peer implements MessageConstants{
 			connections.put(remotePeer, connection);
 			//Thread sendingThread = new Thread(new RespondTask(connections, connection, remotePeer, log));
 			//sendingThread.start();
-			System.out.println(connection.getSocket());
+			//System.out.println(connection.getSocket());
 			MessageProcessor.sendHandshake(connection, remotePeer, log, newFile);
 			//System.out.println("Send bitfield");
 			//MessageSender.sendBitfield(connection, remotePeer, log, myBitField);

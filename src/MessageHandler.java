@@ -180,6 +180,7 @@ public class MessageHandler implements Runnable{
 
     private void updatePeerBitfield(Connection connection, int pieceIndex) {
         connection.getBitfield().setPieceToCompleted(pieceIndex);
+        System.out.println("peer_" + peer + ": " + connection.getBitfield().getBitField());
     }
 
 }

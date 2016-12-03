@@ -3,4 +3,4 @@
 export CLASSPATH=".:lib/*"
 
 
-java Peer $1 $2 $3 $4
+java -Xmx128m Peer $1 $2 $3 $4
