@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.14159265-2.6-1.40.16 (TeX Live 2015) (preloaded format=pdflatex 2015.11.15)  4 DEC 2016 04:24
+This is pdfTeX, Version 3.14159265-2.6-1.40.16 (TeX Live 2015) (preloaded format=pdflatex 2015.11.15)  4 DEC 2016 15:50
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -252,9 +252,6 @@ LaTeX Warning: Label `fig:sub1' multiply defined.
 
 LaTeX Warning: Label `fig:side:a' multiply defined.
 
-
-LaTeX Warning: Label `fig:side:a' multiply defined.
-
 )
 \openout1 = `bare_conf.aux'.
 
@@ -324,18 +321,11 @@ Missing character: There is no ú in font ptmr7t!
 Missing character: There is no ‚ in font ptmr7t!
 Missing character: There is no Ä in font ptmr7t!
 Missing character: There is no ù in font ptmr7t!
-
-
-LaTeX Warning: Citation `PEX' on page 2 undefined on input line 542.
-
-
-LaTeX Warning: Citation `PEX' on page 2 undefined on input line 542.
-
-<v3.jpg, id=10, 563.10374pt x 296.60812pt>
-File: v3.jpg Graphic file (type jpg)
- <use v3.jpg>
-Package pdftex.def Info: v3.jpg used on input line 552.
-(pdftex.def)             Requested size: 202.35622pt x 106.58875pt.
+ <f3.png, id=10, 563.10374pt x 296.66835pt>
+File: f3.png Graphic file (type png)
+ <use f3.png>
+Package pdftex.def Info: f3.png used on input line 546.
+(pdftex.def)             Requested size: 209.58255pt x 110.41742pt.
 Missing character: There is no ‚ in font ptmr7t!
 Missing character: There is no Ä in font ptmr7t!
 Missing character: There is no ô in font ptmr7t!
@@ -352,41 +342,48 @@ Missing character: There is no ‚ in font ptmr7t!
 Missing character: There is no Ä in font ptmr7t!
 Missing character: There is no ô in font ptmr7t!
 
-<v2.jpg, id=11, 676.77844pt x 521.69907pt>
-File: v2.jpg Graphic file (type jpg)
- <use v2.jpg>
-Package pdftex.def Info: v2.jpg used on input line 566.
-(pdftex.def)             Requested size: 226.79846pt x 174.82797pt.
+<f1.png, id=11, 703.9098pt x 517.935pt>
+File: f1.png Graphic file (type png)
+ <use f1.png>
+Package pdftex.def Info: f1.png used on input line 560.
+(pdftex.def)             Requested size: 226.79846pt x 166.87271pt.
 
-<v1.jpg, id=12, 703.87968pt x 517.935pt>
-File: v1.jpg Graphic file (type jpg)
- <use v1.jpg>
-Package pdftex.def Info: v1.jpg used on input line 569.
-(pdftex.def)             Requested size: 226.79846pt x 166.88062pt.
- [2 <./v3.jpg>]
+<f2.png, id=12, 676.80855pt x 521.66895pt>
+File: f2.png Graphic file (type png)
+ <use f2.png>
+Package pdftex.def Info: f2.png used on input line 563.
+(pdftex.def)             Requested size: 226.79846pt x 174.80992pt.
+ [2 <./f3.png>]
 Missing character: There is no ‚ in font ptmr7t!
 Missing character: There is no Ä in font ptmr7t!
 Missing character: There is no ô in font ptmr7t!
-
-
-LaTeX Warning: Citation `Cohen' on page 3 undefined on input line 581.
-
 LaTeX Font Info:    External font `cmex10' loaded for size
-(Font)              <8> on input line 604.
+(Font)              <8> on input line 605.
 LaTeX Font Info:    External font `cmex10' loaded for size
-(Font)              <6> on input line 604.
+(Font)              <6> on input line 605.
+
 <Graph1.png, id=16, 794.97pt x 614.295pt>
 File: Graph1.png Graphic file (type png)
  <use Graph1.png>
-Package pdftex.def Info: Graph1.png used on input line 627.
+Package pdftex.def Info: Graph1.png used on input line 628.
 (pdftex.def)             Requested size: 202.35622pt x 156.36662pt.
 
 <Graph2.png, id=17, 794.97pt x 614.295pt>
 File: Graph2.png Graphic file (type png)
  <use Graph2.png>
-Package pdftex.def Info: Graph2.png used on input line 634.
+Package pdftex.def Info: Graph2.png used on input line 635.
 (pdftex.def)             Requested size: 202.35622pt x 156.36662pt.
- [3 <./v2.jpg> <./v1.jpg>] [4 <./Graph1.png> <./Graph2.png>]
+ [3 <./f1.png> <./f2.png>]
+Missing character: There is no ‚ in font ptmr7t!
+Missing character: There is no Ä in font ptmr7t!
+Missing character: There is no ô in font ptmr7t!
+ [4 <./Graph1.png> <./Graph2.png>]
+<Graph5.png, id=26, 1084.05pt x 614.295pt>
+File: Graph5.png Graphic file (type png)
+ <use Graph5.png>
+Package pdftex.def Info: Graph5.png used on input line 718.
+(pdftex.def)             Requested size: 216.81pt x 122.85681pt.
+
 
 ** Conference Paper **
 Before submitting the final camera ready copy, remember to:
@@ -400,20 +397,17 @@ Before submitting the final camera ready copy, remember to:
 
 [5
 
-] (./bare_conf.aux)
-
-LaTeX Warning: There were undefined references.
-
+ <./Graph5.png>] (./bare_conf.aux)
 
 LaTeX Warning: There were multiply-defined labels.
 
  ) 
 Here is how much of TeX's memory you used:
- 3555 strings out of 494501
- 60397 string characters out of 6167029
- 131954 words of memory out of 5000000
- 6815 multiletter control sequences out of 15000+600000
- 38151 words of font info for 71 fonts, out of 8000000 for 9000
+ 3558 strings out of 494501
+ 60461 string characters out of 6167029
+ 132954 words of memory out of 5000000
+ 6819 multiletter control sequences out of 15000+600000
+ 37044 words of font info for 70 fonts, out of 8000000 for 9000
  322 hyphenation exceptions out of 8191
  44i,9n,42p,1242b,255s stack positions out of 5000i,500n,10000p,200000b,80000s
 {/usr/local/texlive/2015basic/texmf-dist/fonts/enc/dvips/base/8r.enc}</usr/lo
@@ -421,10 +415,10 @@ cal/texlive/2015basic/texmf-dist/fonts/type1/urw/times/utmb8a.pfb></usr/local/t
 exlive/2015basic/texmf-dist/fonts/type1/urw/times/utmbi8a.pfb></usr/local/texli
 ve/2015basic/texmf-dist/fonts/type1/urw/times/utmr8a.pfb></usr/local/texlive/20
 15basic/texmf-dist/fonts/type1/urw/times/utmri8a.pfb>
-Output written on bare_conf.pdf (5 pages, 647036 bytes).
+Output written on bare_conf.pdf (5 pages, 1310427 bytes).
 PDF statistics:
- 44 PDF objects out of 1000 (max. 8388607)
+ 46 PDF objects out of 1000 (max. 8388607)
  25 compressed objects within 1 object stream
  0 named destinations out of 1000 (max. 500000)
- 26 words of extra memory for PDF output out of 10000 (max. 10000000)
+ 31 words of extra memory for PDF output out of 10000 (max. 10000000)
 
