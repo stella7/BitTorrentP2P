@@ -551,7 +551,7 @@
 		\centering
 		\includegraphics[width=2.8in]{v3.jpg}
 		\caption{System Architecture}
-		\label{fig:side:a}
+		\label{fig:side:1}
 	\end{figure}
 	
 	In our design, we use Apache ZooKeeper to act as a metadata server which provides the information of peer lists of each swarm and metainfo of each file. The top level directories in ZooKeeper consist of /peer and /file nodes. The /peer node is used to hold the hostname and port number information of each peer. The /file nodes maintains the files and swarms.  Each file is associated with a descendant node under /file, we store the  torrent content in the file node’s data. All peers within one file swarm are registered under that specific file node.
