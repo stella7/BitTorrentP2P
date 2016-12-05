@@ -730,7 +730,7 @@ Our system is tested on ecelinux[1-3].uwaterloo.ca. The ZooKeeper service is on 
 	\section{Conclusion and future work}
 Conclusion
 	
-	A new observation of free-riding problem in BitTorrent has experimentally demonstrated[1] by Sirivianos and Chen regardless of tit-for tat mechanism. When a peer connects to many peers, it increases its chance to be unchoked by leechers and find out seeders. As a result, it may adopt an exploit strategy. Some modifications should be made in the system to allow peers to detect whether a peer tries to become selfish or not before establishing a connection with it.
+	A new observation of free-riding problem in BitTorrent has experimentally demonstrated\cite{free-riding in BitTorrent} by Sirivianos and Chen regardless of tit-for tat mechanism. When a peer connects to many peers, it increases its chance to be unchoked by leechers and find out seeders. As a result, it may adopt an exploit strategy. Some modifications should be made in the system to allow peers to detect whether a peer tries to become selfish or not before establishing a connection with it.
 	
 	For the reason that tit-for-tat strategy upload speed to determine which peers will be put in unchoked list, those new entrants without any data have no opportunity to start downloading before some peers finish. Consequently, we will add a new mechanism that enables new peers to upload a piece randomly when they take part in the network. Moreover, an extra unchoked space is offered to give those new peers or peers with a low download/upload rate a chance.
 
