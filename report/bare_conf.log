@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.14159265-2.6-1.40.16 (TeX Live 2015) (preloaded format=pdflatex 2015.5.24)  5 DEC 2016 15:07
+This is pdfTeX, Version 3.14159265-2.6-1.40.16 (TeX Live 2015) (preloaded format=pdflatex 2015.5.24)  5 DEC 2016 15:44
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -289,9 +289,9 @@ Package caption Info: Begin \AtBeginDocument code.
 Package caption Info: subfig package v1.3 is loaded.
 Package caption Info: End \AtBeginDocument code.
 
-Underfull \hbox (badness 6859) in paragraph at lines 384--385
-[]\OT1/ptm/b/n/10 Keywords: \OT1/ptm/m/n/10 Bit-Tor-rent; peer-to-peer; dis-tri
-buted; file-
+Underfull \hbox (badness 3895) in paragraph at lines 384--386
+[]\OT1/ptm/b/it/9 Index Terms\OT1/ptm/b/n/9 ---BitTorrent; peer-to-peer; dis-tr
+ibuted; file-
  []
 
 Missing character: There is no ‚ in font ptmr7t!
@@ -332,51 +332,53 @@ Missing character: There is no ù in font ptmr7t!
 <f3.png, id=10, 563.10374pt x 296.66835pt>
 File: f3.png Graphic file (type png)
  <use f3.png>
-Package pdftex.def Info: f3.png used on input line 546.
+Package pdftex.def Info: f3.png used on input line 548.
 (pdftex.def)             Requested size: 209.58255pt x 110.41742pt.
  [2]
 <f1.png, id=14, 703.9098pt x 517.935pt>
 File: f1.png Graphic file (type png)
  <use f1.png>
-Package pdftex.def Info: f1.png used on input line 560.
+Package pdftex.def Info: f1.png used on input line 562.
 (pdftex.def)             Requested size: 226.79846pt x 166.87271pt.
 
 <f2.png, id=15, 676.80855pt x 521.66895pt>
 File: f2.png Graphic file (type png)
  <use f2.png>
-Package pdftex.def Info: f2.png used on input line 563.
+Package pdftex.def Info: f2.png used on input line 565.
 (pdftex.def)             Requested size: 226.79846pt x 174.80992pt.
  [3 <./f3.png> <./f1.png> <./f2.png>]
+Missing character: There is no ‚ in font ptmr7t!
+Missing character: There is no Ä in font ptmr7t!
+Missing character: There is no ú in font ptmr7t!
+Missing character: There is no ‚ in font ptmr7t!
+Missing character: There is no Ä in font ptmr7t!
+Missing character: There is no ù in font ptmr7t!
 LaTeX Font Info:    External font `cmex10' loaded for size
-(Font)              <8> on input line 605.
+(Font)              <8> on input line 611.
 LaTeX Font Info:    External font `cmex10' loaded for size
-(Font)              <6> on input line 605.
+(Font)              <6> on input line 611.
 LaTeX Font Info:    External font `cmex10' loaded for size
-(Font)              <5> on input line 605.
+(Font)              <5> on input line 611.
  <Graph1.png, id=19, 794.97pt x 614.295pt>
 File: Graph1.png Graphic file (type png)
  <use Graph1.png>
-Package pdftex.def Info: Graph1.png used on input line 628.
+Package pdftex.def Info: Graph1.png used on input line 634.
 (pdftex.def)             Requested size: 202.35622pt x 156.36662pt.
 
 <Graph2.png, id=20, 794.97pt x 614.295pt>
 File: Graph2.png Graphic file (type png)
  <use Graph2.png>
-Package pdftex.def Info: Graph2.png used on input line 635.
+Package pdftex.def Info: Graph2.png used on input line 641.
 (pdftex.def)             Requested size: 202.35622pt x 156.36662pt.
  [4 <./Graph1.png> <./Graph2.png>] <Graph5.png, id=26, 1084.05pt x 614.295pt>
 File: Graph5.png Graphic file (type png)
  <use Graph5.png>
-Package pdftex.def Info: Graph5.png used on input line 718.
+Package pdftex.def Info: Graph5.png used on input line 724.
 (pdftex.def)             Requested size: 258.0pt x 146.19652pt.
 
-Overfull \hbox (6.0pt too wide) in paragraph at lines 718--719
+Overfull \hbox (6.0pt too wide) in paragraph at lines 724--725
  [][] 
  []
-
-
-Underfull \vbox (badness 5260) has occurred while \output is active []
-
 
 
 ** Conference Paper **
@@ -395,11 +397,11 @@ LaTeX Warning: There were multiply-defined labels.
 
  ) 
 Here is how much of TeX's memory you used:
- 3560 strings out of 493089
- 60217 string characters out of 6134842
+ 3559 strings out of 493089
+ 60211 string characters out of 6134842
  138486 words of memory out of 5000000
  7025 multiletter control sequences out of 15000+600000
- 37073 words of font info for 70 fonts, out of 8000000 for 9000
+ 35966 words of font info for 69 fonts, out of 8000000 for 9000
  1144 hyphenation exceptions out of 8191
  44i,9n,42p,1242b,255s stack positions out of 5000i,500n,10000p,200000b,80000s
 {/usr/local/texlive/2015/texmf-dist/fonts/enc/dvips/base/8r.enc}</usr/local/t
@@ -407,7 +409,7 @@ exlive/2015/texmf-dist/fonts/type1/urw/times/utmb8a.pfb></usr/local/texlive/201
 5/texmf-dist/fonts/type1/urw/times/utmbi8a.pfb></usr/local/texlive/2015/texmf-d
 ist/fonts/type1/urw/times/utmr8a.pfb></usr/local/texlive/2015/texmf-dist/fonts/
 type1/urw/times/utmri8a.pfb>
-Output written on bare_conf.pdf (5 pages, 1313584 bytes).
+Output written on bare_conf.pdf (5 pages, 1318029 bytes).
 PDF statistics:
  46 PDF objects out of 1000 (max. 8388607)
  25 compressed objects within 1 object stream
