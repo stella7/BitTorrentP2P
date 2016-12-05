@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.14159265-2.6-1.40.16 (TeX Live 2015) (preloaded format=pdflatex 2015.11.15)  4 DEC 2016 16:03
+This is pdfTeX, Version 3.14159265-2.6-1.40.16 (TeX Live 2015) (preloaded format=pdflatex 2015.11.15)  4 DEC 2016 23:38
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -326,21 +326,6 @@ File: f3.png Graphic file (type png)
  <use f3.png>
 Package pdftex.def Info: f3.png used on input line 546.
 (pdftex.def)             Requested size: 209.58255pt x 110.41742pt.
-Missing character: There is no â in font ptmr7t!
-Missing character: There is no € in font ptmr7t!
-Missing character: There is no ™ in font ptmr7t!
-Missing character: There is no â in font ptmr7t!
-Missing character: There is no € in font ptmr7t!
-Missing character: There is no ™ in font ptmr7t!
-Missing character: There is no â in font ptmr7t!
-Missing character: There is no € in font ptmr7t!
-Missing character: There is no ™ in font ptmr7t!
-Missing character: There is no â in font ptmr7t!
-Missing character: There is no € in font ptmr7t!
-Missing character: There is no ™ in font ptmr7t!
-Missing character: There is no â in font ptmr7t!
-Missing character: There is no € in font ptmr7t!
-Missing character: There is no ™ in font ptmr7t!
 
 <f1.png, id=11, 703.9098pt x 517.935pt>
 File: f1.png Graphic file (type png)
@@ -354,9 +339,6 @@ File: f2.png Graphic file (type png)
 Package pdftex.def Info: f2.png used on input line 563.
 (pdftex.def)             Requested size: 226.79846pt x 174.80992pt.
  [2 <./f3.png>]
-Missing character: There is no â in font ptmr7t!
-Missing character: There is no € in font ptmr7t!
-Missing character: There is no ™ in font ptmr7t!
 LaTeX Font Info:    External font `cmex10' loaded for size
 (Font)              <8> on input line 605.
 LaTeX Font Info:    External font `cmex10' loaded for size
@@ -373,11 +355,7 @@ File: Graph2.png Graphic file (type png)
  <use Graph2.png>
 Package pdftex.def Info: Graph2.png used on input line 635.
 (pdftex.def)             Requested size: 202.35622pt x 156.36662pt.
- [3 <./f1.png> <./f2.png>]
-Missing character: There is no â in font ptmr7t!
-Missing character: There is no € in font ptmr7t!
-Missing character: There is no ™ in font ptmr7t!
- [4 <./Graph1.png> <./Graph2.png>]
+ [3 <./f1.png> <./f2.png>] [4 <./Graph1.png> <./Graph2.png>]
 <Graph5.png, id=26, 1084.05pt x 614.295pt>
 File: Graph5.png Graphic file (type png)
  <use Graph5.png>
@@ -419,7 +397,7 @@ cal/texlive/2015basic/texmf-dist/fonts/type1/urw/times/utmb8a.pfb></usr/local/t
 exlive/2015basic/texmf-dist/fonts/type1/urw/times/utmbi8a.pfb></usr/local/texli
 ve/2015basic/texmf-dist/fonts/type1/urw/times/utmr8a.pfb></usr/local/texlive/20
 15basic/texmf-dist/fonts/type1/urw/times/utmri8a.pfb>
-Output written on bare_conf.pdf (5 pages, 1310430 bytes).
+Output written on bare_conf.pdf (5 pages, 1310484 bytes).
 PDF statistics:
  46 PDF objects out of 1000 (max. 8388607)
  25 compressed objects within 1 object stream
