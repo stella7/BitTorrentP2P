@@ -409,11 +409,11 @@
 	
 	Nevertheless, a free-riding problem presents. It has been estimated\cite{Measurement} that 20–40\% of Napster users and up to 70\% of Gnutella users shared little or no content. Also, Huberman and Adar\cite{Gnutella} found that nearly 50\% of responses are returned by 1\% of the sharing hosts and that nearly 98\% of the responses were returned by 25\% of the sharing hosts. The unfairness in free-riding situation degrades the performance of P2P network significantly. 
 
-	Thus, BitTorrent has been emerged to solve this problem using tit-for-tat strategy, which prevents from that selfish peers who do not upload but attempt to keep high download rates. It also assists those peers, who just participate in the network without any data to provide, rapidly become uploaders to others.
+	Thus, BitTorrent has been emerged to address this problem using tit-for-tat strategy, which prevents from that selfish peers who do not upload but attempt to keep high download rates. It also assists those peers, who just participate in the network without any data to provide, rapidly become uploaders to others.
 	
 	To realize fault tolerance and coordination, the main component of BitTorrent known as tracker keeps contact with peers by receiving messages from them when they join or leave the system as well as every fixed period. Therefore, there are a lot of messages flowed in the network, leading to a huge consumption of bandwidth. Taking account of this, we propose a novel BitTorrent-like file sharing system with ZooKeeper. 
 	
-	The rest of the paper is organized as follows. Section II provides a brief overview of the BitTorrent protocol and ZooKeeper. In section III, we present related work and discuss their performance. Section IV describes our design rationale and implementation of BitTorrent-like file sharing system, while Section V shows experimental results under a variety of workloads. We conclude and propose future works in section VI. 
+	The rest of the paper is organized as follows. Section II provides a brief overview of the BitTorrent protocol and ZooKeeper. In section III, we present related work and discuss their performance. Section IV describes our design rationale and implementation of BitTorrent-like file sharing system, while Section V shows experimental results under a variety of workloads. We conclude and propose future work in section VI. 
 	
 	% An example of a floating figure using the graphicx package.
 	% Note that \label must occur AFTER (or within) \caption.
@@ -727,8 +727,13 @@ Our system is tested on ecelinux[1-3].uwaterloo.ca. The ZooKeeper service is on 
 	\end{figure}
 	
 	
-	\section{Conclusion and future works}
+	\section{Conclusion and future work}
+Conclusion
 	
+	A new observation of free-riding problem in BitTorrent has experimentally demonstrated[1] by Sirivianos and Chen regardless of tit-for tat mechanism. When a peer connects to many peers, it increases its chance to be unchoked by leechers and find out seeders. As a result, it may adopt an exploit strategy. Some modifications should be made in the system to allow peers to detect whether a peer tries to become selfish or not before establishing a connection with it.
+	
+	For the reason that tit-for-tat strategy upload speed to determine which peers will be put in unchoked list, those new entrants without any data have no opportunity to start downloading before some peers finish. Consequently, we will add a new mechanism that enables new peers to upload a piece randomly when they take part in the network. Moreover, an extra unchoked space is offered to give those new peers or peers with a low download/upload rate a chance.
+
 	% conference papers do not normally have an appendix
 	
 	
