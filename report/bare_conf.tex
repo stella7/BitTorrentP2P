@@ -552,7 +552,7 @@
 	
 	In our design, we use Apache ZooKeeper to act as a metadata server which provides the information of peer lists of each swarm and metainfo of each file. The top level directories in ZooKeeper consist of /peer and /file nodes. The /peer node is used to hold the hostname and port number information of each peer. The /file nodes maintains the files and swarms.  Each file is associated with a descendant node under /file, we store the  torrent content in the file node's data. All peers within one file swarm are registered under that specific file node.
 	
-	A client can be started either as a seeder or as a leecher with a unique peer ID. If the user has a file to share, he can start the client as a seeder. The client will create a metafile and advertise the file to the ZooKeeper. A node with filename as node's name is created under /file and the contents of the torrent information include filename, file size,  pieces length will be stored in the node. Meanwhile, the peer is registered under both the /peer node and /file/filename node with the peer ID as the node's name and hostname and port number as the node's data. If the user wants to download a file, he needs to initiate the client as a leecher with the file's name. The client will retrieve the metafile and peer lists associated with the file from the ZooKeeper. The peer is also added to the lists. Then the client can connect to those peers in the returning list to start exchange file pieces. Downloading or uploading multiple files simply involves running multiple client instances.
+	A client can be started either as a seeder or as a leecher with a unique peer ID. If the user has a file to share, he can start the client as a seeder. The client will create a metafile and advertise the file to the ZooKeeper. A node with filename as node's name is created under /file and the contents of the torrent information include filename, file size,  piece length, pieces will be stored in the node. Meanwhile, the peer is registered under both the /peer node and /file/filename node with the peer ID as the node's name and hostname and port number as the node's data. If the user wants to download a file, he needs to initiate the client as a leecher with the file's name. The client will retrieve the metafile and peer lists associated with the file from the ZooKeeper. The peer is also added to the lists. Then the client can connect to those peers in the returning list to start exchange file pieces. Downloading or uploading multiple files simply involves running multiple client instances.
 	
 	\subsection{Connection state}
 	A peer must maintain state information for each connection that it has with a remote peer. A peer usually play the roles of both downloader and uploader, Figure 2 shows two finite state machine for these two actions.
@@ -579,8 +579,11 @@
 	\subsection{Piece selection}
 	Selecting pieces to download in a good order is very important for transfer efficiency. For example, if all the peers start to download the first piece from the first bit of the bitfield, it results in all peers having same bits of pieces, and can not exchange files with each other. In our design, we adopted the random first piece algorithm. The peer will check its own bitfield, pick the bit with zero randomly and request that index of piece from other peer.
 	
+	\subsection{File integrity check}
+	The data of /filename znode has a string called pieces, in which 20-byte hash values related to each piece of the file respectively are concatenated. Secure Hash Algorithm 1(SHA1) produces a hash value for each piece and render it as a hexadecimal number. These SHA1 values, regarded as message digests, give us a favor to check if the file is completely downloaded during carrying on experiments. 
+	
 	\section{Experiments and results}
-Our system is tested on ecelinux[1-3].uwaterloo.ca. The ZooKeeper service is on snorkel.uwaterloo.ca. The measurements focus on fault tolerance and evaluation of performance. We ran the system with three sizes-small, medium, large- of files of various types. There are 6 peers in this experiment, one is the seeder and the other 5 are leechers. In each test, a peer as seeder is started at the beginning, then different numbers of leechers ran simultaneously or non-simultaneously. 
+	Our system is tested on ecelinux[1-3].uwaterloo.ca. The ZooKeeper service is on snorkel.uwaterloo.ca. The measurements focus on fault tolerance and evaluation of performance. We ran the system with three sizes-small, medium, large- of files of various types. There are 6 peers in this experiment, one is the seeder and the other 5 are leechers. In each test, a peer as seeder is started at the beginning, then different numbers of leechers ran simultaneously or non-simultaneously. 
 	
 	\subsection{Fault tolerance}
 	For fault tolerance, as the centralized tracker is already eliminated in our design, ZooKeeper introduce failures to peers. There are two kinds of potential failures: uploader failure and downloader failure.
@@ -728,7 +731,7 @@ Our system is tested on ecelinux[1-3].uwaterloo.ca. The ZooKeeper service is on 
 	
 	
 	\section{Conclusion and future work}
-Conclusion
+	This paper reveals a BitTorrent-like system, which is a decentralized peer-to-peer file sharing system. This work uses ZooKeeper to replace the metainfo file(.torrent) and tracker in native BitTorrent protocol, thus improving bootstrap and reducing messages flowed in the network.
 	
 	A new observation of free-riding problem in BitTorrent has experimentally demonstrated\cite{free-riding in BitTorrent} by Sirivianos and Chen regardless of tit-for tat mechanism. When a peer connects to many peers, it increases its chance to be unchoked by leechers and find out seeders. As a result, it may adopt an exploit strategy. Some modifications should be made in the system to allow peers to detect whether a peer tries to become selfish or not before establishing a connection with it.
 	
@@ -738,10 +741,10 @@ Conclusion
 	
 	
 	% use section* for acknowledgment
-	\section*{Acknowledgment}
+	%\section*{Acknowledgment}
 	
 	
-	The authors would like to thank...
+	%The authors would like to thank...
 	
 	
 	
